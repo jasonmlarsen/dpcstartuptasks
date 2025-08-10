@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
 import { AuthProvider } from './components/auth/AuthProvider'
 import AuthGuard from './components/auth/AuthGuard'
 import Dashboard from './components/dashboard/Dashboard'
+import './index.css'
 import '../styles/design-tokens.css'
 import '../styles/base-ui.css'
 
