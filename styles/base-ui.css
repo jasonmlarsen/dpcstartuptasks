@@ -190,7 +190,6 @@ input,
 textarea,
 select {
   width: 100%;
-  padding: var(--space-3);
   border: 2px solid var(--gray-300);
   border-radius: var(--radius-md);
   font-size: 1rem;
