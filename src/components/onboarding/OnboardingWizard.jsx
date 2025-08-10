@@ -300,7 +300,18 @@ const OnboardingWizard = () => {
               </button>
             )}
             
-            <div className="ml-auto">
+            <div className="ml-auto flex space-x-3">
+              {currentStep === 4 && (
+                <button
+                  type="button"
+                  onClick={completeOnboarding}
+                  className="btn btn-secondary"
+                  disabled={loading}
+                >
+                  Skip for now
+                </button>
+              )}
+              
               {currentStep < 4 ? (
                 <button
                   type="button"
