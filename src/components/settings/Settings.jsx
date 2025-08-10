@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { useAuth } from '../auth/AuthProvider'
 import { supabase, getCurrentUserOrganization } from '../../lib/supabase'
-import { Settings as SettingsIcon, Building2, Calendar, MapPin, User, Save, AlertCircle } from 'lucide-react'
+import { Settings as SettingsIcon, Building2, Calendar, MapPin, User, Users, Save, AlertCircle, UserPlus } from 'lucide-react'
 
 const Settings = () => {
   const { user, signOut } = useAuth()
@@ -16,13 +16,17 @@ const Settings = () => {
     clinicName: '',
     targetLaunchDate: '',
     city: '',
-    state: ''
+    state: '',
+    inviteEmails: ['', '']
   })
 
   const [organizationId, setOrganizationId] = useState(null)
+  const [teamMembers, setTeamMembers] = useState([])
+  const [inviting, setInviting] = useState(false)
 
   useEffect(() => {
     loadUserData()
+    loadTeamMembers()
   }, [])
 
   const loadUserData = async () => {
@@ -37,7 +41,8 @@ const Settings = () => {
           clinicName: userData.organization.name || '',
           targetLaunchDate: userData.organization.target_launch_date || '',
           city: userData.organization.city || '',
-          state: userData.organization.state || ''
+          state: userData.organization.state || '',
+          inviteEmails: ['', '']
         })
         setOrganizationId(userData.organization.id)
       }
@@ -49,10 +54,37 @@ const Settings = () => {
     }
   }
 
+  const loadTeamMembers = async () => {
+    try {
+      const userData = await getCurrentUserOrganization()
+      if (userData && userData.organization) {
+        const { data: members, error } = await supabase
+          .from('users')
+          .select('id, email, full_name, created_at')
+          .eq('organization_id', userData.organization.id)
+          .order('created_at', { ascending: true })
+
+        if (error) throw error
+        setTeamMembers(members || [])
+      }
+    } catch (err) {
+      console.error('Error loading team members:', err)
+    }
+  }
+
   const handleInputChange = (field, value) => {
     setFormData(prev => ({
       ...prev,
       [field]: value
+    }))
+    setError('')
+    setSuccess('')
+  }
+
+  const handleInviteEmailChange = (index, value) => {
+    setFormData(prev => ({
+      ...prev,
+      inviteEmails: prev.inviteEmails.map((email, i) => i === index ? value : email)
     }))
     setError('')
     setSuccess('')
@@ -98,6 +130,44 @@ const Settings = () => {
       setError(err.message || 'Failed to save settings')
     } finally {
       setSaving(false)
+    }
+  }
+
+  const handleSendInvitations = async () => {
+    const validEmails = formData.inviteEmails.filter(email => email.trim().length > 0)
+    
+    if (validEmails.length === 0) {
+      setError('Please enter at least one email address to invite')
+      return
+    }
+
+    // Check if we would exceed the 3-user limit
+    if (teamMembers.length + validEmails.length > 3) {
+      setError(`Cannot invite ${validEmails.length} members. Maximum 3 users per organization (currently have ${teamMembers.length})`)
+      return
+    }
+
+    setInviting(true)
+    setError('')
+    setSuccess('')
+
+    try {
+      // TODO: Implement actual invitation system
+      // For now, just show a success message
+      console.log('Invitations to send:', validEmails)
+      
+      // Clear the invitation emails
+      setFormData(prev => ({
+        ...prev,
+        inviteEmails: ['', '']
+      }))
+      
+      setSuccess(`Invitations sent to ${validEmails.join(', ')}! (Note: Invitation system not yet implemented)`)
+    } catch (err) {
+      console.error('Error sending invitations:', err)
+      setError(err.message || 'Failed to send invitations')
+    } finally {
+      setInviting(false)
     }
   }
 
@@ -260,6 +330,74 @@ const Settings = () => {
               </div>
             </div>
 
+            {/* Team Management */}
+            <div>
+              <div className="flex items-center mb-4">
+                <Users className="w-5 h-5 text-primary mr-2" />
+                <h3 className="text-lg font-medium text-gray-900">Team Management</h3>
+              </div>
+              
+              {/* Current Team Members */}
+              <div className="mb-6">
+                <h4 className="text-sm font-medium text-gray-700 mb-3">
+                  Current Team Members ({teamMembers.length}/3)
+                </h4>
+                <div className="space-y-2">
+                  {teamMembers.map((member) => (
+                    <div key={member.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-md">
+                      <div>
+                        <p className="font-medium text-gray-900">{member.full_name}</p>
+                        <p className="text-sm text-gray-600">{member.email}</p>
+                      </div>
+                      {member.id === user.id && (
+                        <span className="text-xs bg-primary text-white px-2 py-1 rounded">You</span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Invite New Members */}
+              {teamMembers.length < 3 && (
+                <div>
+                  <h4 className="text-sm font-medium text-gray-700 mb-3">
+                    Invite Team Members
+                  </h4>
+                  <div className="space-y-4">
+                    {formData.inviteEmails.map((email, index) => (
+                      <div key={index} className="form-group">
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Team Member {index + 1} Email
+                        </label>
+                        <input
+                          type="email"
+                          className="form-input"
+                          placeholder="colleague@example.com"
+                          value={email}
+                          onChange={(e) => handleInviteEmailChange(index, e.target.value)}
+                        />
+                      </div>
+                    ))}
+                    <button
+                      onClick={handleSendInvitations}
+                      disabled={inviting}
+                      className="btn btn-outline-primary flex items-center"
+                    >
+                      <UserPlus className="w-4 h-4 mr-2" />
+                      {inviting ? 'Sending Invitations...' : 'Send Invitations'}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {teamMembers.length >= 3 && (
+                <div className="p-3 bg-blue-50 border border-blue-200 rounded-md">
+                  <p className="text-sm text-blue-600">
+                    Your team is at the maximum capacity of 3 members.
+                  </p>
+                </div>
+              )}
+            </div>
             {/* Messages */}
             {error && (
               <div className="mt-6 p-3 bg-red-50 border border-red-200 rounded-md flex items-center">
