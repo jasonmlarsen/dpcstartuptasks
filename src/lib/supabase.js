@@ -36,13 +36,13 @@ export const needsOnboarding = async () => {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return true
 
-  const { data: userData, error } = await supabase
+  const { data: userDataArray, error } = await supabase
     .from('users')
     .select('organization_id')
     .eq('id', user.id)
-    .single()
+    .limit(1)
 
-  if (error || !userData?.organization_id) {
+  if (error || !userDataArray || userDataArray.length === 0 || !userDataArray[0]?.organization_id) {
     return true
   }
 
