@@ -78,11 +78,3 @@ const Dashboard = () => {
 }
 
 export default Dashboard
-          </div>
-        </div>
-      </main>
-    </div>
-  )
-}
-
-export default Dashboard
