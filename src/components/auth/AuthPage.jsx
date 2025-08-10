@@ -80,7 +80,7 @@ const AuthPage = () => {
                     name="fullName"
                     type="text"
                     required={isSignUp}
-                    className="form-input pl-10"
+                    className="form-input"
                     placeholder="Your full name"
                     value={formData.fullName}
                     onChange={(e) => handleInputChange('fullName', e.target.value)}
@@ -101,7 +101,7 @@ const AuthPage = () => {
                   type="email"
                   autoComplete="email"
                   required
-                  className="form-input pl-10"
+                  className="form-input"
                   placeholder="your@email.com"
                   value={formData.email}
                   onChange={(e) => handleInputChange('email', e.target.value)}
@@ -121,7 +121,7 @@ const AuthPage = () => {
                   type="password"
                   autoComplete={isSignUp ? "new-password" : "current-password"}
                   required
-                  className="form-input pl-10"
+                  className="form-input"
                   placeholder="Your password"
                   value={formData.password}
                   onChange={(e) => handleInputChange('password', e.target.value)}
@@ -142,7 +142,7 @@ const AuthPage = () => {
                     type="password"
                     autoComplete="new-password"
                     required={isSignUp}
-                    className="form-input pl-10"
+                    className="form-input"
                     placeholder="Confirm your password"
                     value={formData.confirmPassword}
                     onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
