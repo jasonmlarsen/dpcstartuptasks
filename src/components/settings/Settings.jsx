@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { useAuth } from '../auth/AuthProvider'
 import { supabase, getCurrentUserOrganization } from '../../lib/supabase'
-import { Settings as SettingsIcon, Building2, Calendar, MapPin, User, Users, Save, AlertCircle, UserPlus } from 'lucide-react'
+import { Building2, Calendar, MapPin, User, Users, Save, AlertCircle, UserPlus } from 'lucide-react'
 
 const Settings = () => {
   const { user, signOut } = useAuth()
@@ -188,34 +188,15 @@ const Settings = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b border-gray-200">
-        <div className="container mx-auto px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <SettingsIcon className="h-8 w-8 text-primary" />
-              <h1 className="text-xl font-semibold text-gray-900">
-                Settings
-              </h1>
-            </div>
-            <button
-              onClick={handleSignOut}
-              className="btn btn-secondary"
-            >
-              Sign Out
-            </button>
-          </div>
-        </div>
-      </header>
-
       {/* Main Content */}
       <main className="container mx-auto px-6 py-8">
         <div className="max-w-2xl mx-auto">
+          <div className="mb-8">
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">Settings</h1>
+            <p className="text-gray-600">Manage your account and clinic information</p>
+          </div>
+          
           <div className="bg-white rounded-lg shadow-sm p-8">
-            <h2 className="text-2xl font-semibold text-gray-900 mb-6">
-              Account & Clinic Settings
-            </h2>
-
             <div className="space-y-8">
               {/* Personal Information */}
               <div>
