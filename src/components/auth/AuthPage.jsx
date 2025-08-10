@@ -73,19 +73,16 @@ const AuthPage = () => {
                 <label htmlFor="fullName" className="block text-sm font-medium text-gray-700 mb-2">
                   Full Name
                 </label>
-                <div className="relative">
-                  <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-                  <input
-                    id="fullName"
-                    name="fullName"
-                    type="text"
-                    required={isSignUp}
-                    className="form-input"
-                    placeholder="Your full name"
-                    value={formData.fullName}
-                    onChange={(e) => handleInputChange('fullName', e.target.value)}
-                  />
-                </div>
+                <input
+                  id="fullName"
+                  name="fullName"
+                  type="text"
+                  required={isSignUp}
+                  className="form-input"
+                  placeholder="Your full name"
+                  value={formData.fullName}
+                  onChange={(e) => handleInputChange('fullName', e.target.value)}
+                />
               </div>
             )}
 
@@ -93,40 +90,34 @@ const AuthPage = () => {
               <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
                 Email Address
               </label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-                <input
-                  id="email"
-                  name="email"
-                  type="email"
-                  autoComplete="email"
-                  required
-                  className="form-input"
-                  placeholder="your@email.com"
-                  value={formData.email}
-                  onChange={(e) => handleInputChange('email', e.target.value)}
-                />
-              </div>
+              <input
+                id="email"
+                name="email"
+                type="email"
+                autoComplete="email"
+                required
+                className="form-input"
+                placeholder="your@email.com"
+                value={formData.email}
+                onChange={(e) => handleInputChange('email', e.target.value)}
+              />
             </div>
 
             <div className="form-group">
               <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
                 Password
               </label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-                <input
-                  id="password"
-                  name="password"
-                  type="password"
-                  autoComplete={isSignUp ? "new-password" : "current-password"}
-                  required
-                  className="form-input"
-                  placeholder="Your password"
-                  value={formData.password}
-                  onChange={(e) => handleInputChange('password', e.target.value)}
-                />
-              </div>
+              <input
+                id="password"
+                name="password"
+                type="password"
+                autoComplete={isSignUp ? "new-password" : "current-password"}
+                required
+                className="form-input"
+                placeholder="Your password"
+                value={formData.password}
+                onChange={(e) => handleInputChange('password', e.target.value)}
+              />
             </div>
 
             {isSignUp && (
@@ -134,20 +125,17 @@ const AuthPage = () => {
                 <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-2">
                   Confirm Password
                 </label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-                  <input
-                    id="confirmPassword"
-                    name="confirmPassword"
-                    type="password"
-                    autoComplete="new-password"
-                    required={isSignUp}
-                    className="form-input"
-                    placeholder="Confirm your password"
-                    value={formData.confirmPassword}
-                    onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
-                  />
-                </div>
+                <input
+                  id="confirmPassword"
+                  name="confirmPassword"
+                  type="password"
+                  autoComplete="new-password"
+                  required={isSignUp}
+                  className="form-input"
+                  placeholder="Confirm your password"
+                  value={formData.confirmPassword}
+                  onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
+                />
               </div>
             )}
           </div>

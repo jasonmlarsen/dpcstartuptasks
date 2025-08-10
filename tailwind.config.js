@@ -240,10 +240,7 @@ export default {
         // Form components
         '.form-input': {
           width: '100%',
-          paddingTop: theme('spacing.3'),
-          paddingBottom: theme('spacing.3'),
-          paddingLeft: '2.5rem',
-          paddingRight: theme('spacing.3'),
+          padding: theme('spacing.3'),
           border: `2px solid ${theme('colors.gray.300')}`,
           borderRadius: theme('borderRadius.md'),
           fontSize: theme('fontSize.base'),
