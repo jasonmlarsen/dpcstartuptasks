@@ -87,16 +87,38 @@ const OnboardingWizard = () => {
       if (orgError) throw orgError
 
       // Create user record
-      const { error: userError } = await supabase
+      // Check if user record already exists
+      const { data: existingUser } = await supabase
         .from('users')
-        .insert({
-          id: user.id,
-          organization_id: orgData.id,
-          email: user.email,
-          full_name: user.user_metadata?.full_name || user.email,
-        })
+        .select('id')
+        .eq('id', user.id)
+        .single()
 
-      if (userError) throw userError
+      // Only create user record if it doesn't exist
+      if (!existingUser) {
+        const { error: userError } = await supabase
+          .from('users')
+          .insert({
+            id: user.id,
+            organization_id: orgData.id,
+            email: user.email,
+            full_name: user.user_metadata?.full_name || user.email,
+          })
+
+        if (userError) throw userError
+      } else {
+        // Update existing user with organization_id
+        const { error: userError } = await supabase
+          .from('users')
+          .update({
+            organization_id: orgData.id,
+            full_name: user.user_metadata?.full_name || user.email,
+          })
+          .eq('id', user.id)
+
+        if (userError) throw userError
+      }
+
 
       // Send invitations (if any)
       const validEmails = formData.inviteEmails.filter(email => email.trim().length > 0)
