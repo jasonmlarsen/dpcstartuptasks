@@ -147,6 +147,74 @@ Upon first login, users complete a short setup flow:
 | Security      | Rate limiting to prevent abuse |
 | Offline       | No offline support needed |
 
+#### 13.1 Security Best Practices
+
+- **Row Level Security (RLS)**: Implement RLS on all database tables to ensure users can only access data within their organization
+  - Organizations table: Users can only see their own organization
+  - Users table: Users can only see other users within their organization
+  - Tasks table: Users can only access tasks belonging to their organization
+  - Comments table: Users can only access comments on tasks within their organization
+- **Secure Authentication**: 
+  - Enforce strong password policies (minimum 8 characters, mix of letters/numbers/symbols)
+  - Secure handling of authentication tokens with proper expiration
+  - Consider MFA as future enhancement
+- **Input Validation**: 
+  - Robust server-side validation on all API endpoints
+  - Client-side validation for user experience
+  - Sanitize all user inputs to prevent XSS attacks
+- **Authorization Checks**: All API endpoints must verify user permissions before data access/modification
+- **Rate Limiting**: 
+  - Authentication endpoints: 5 attempts per minute per IP
+  - API endpoints: 100 requests per minute per user
+  - Task creation: 50 tasks per hour per user
+- **Secure Communication**: All traffic must use HTTPS in production
+- **Dependency Management**: Regular security updates for all third-party libraries
+- **Error Handling**: Generic error messages in production to avoid information leakage
+- **Session Management**: Secure session handling with proper timeout and invalidation
+
+#### 13.2 Performance Optimization
+
+**Database Performance:**
+- **Indexing Strategy**:
+  - Primary indexes on all foreign keys (organization_id, user_id, task_id)
+  - Composite index on (organization_id, created_at) for task listing
+  - Index on (organization_id, completed) for filtering completed tasks
+  - Index on (organization_id, due_date) for date-based queries
+  - Index on (organization_id, assigned_to) for user-specific task queries
+- **Query Optimization**:
+  - Use SELECT with specific columns instead of SELECT *
+  - Implement pagination for task lists (50 tasks per page)
+  - Use database-level filtering instead of client-side filtering
+  - Avoid N+1 queries by using proper JOINs or batch queries
+
+**Frontend Performance:**
+- **Code Splitting**: Implement route-based code splitting for faster initial load
+- **Lazy Loading**: Load task details and comments on demand
+- **Bundle Optimization**: 
+  - Tree shaking to remove unused code
+  - Minification and compression of assets
+  - Separate vendor bundles for better caching
+- **Image Optimization**: 
+  - Use WebP format where supported
+  - Implement responsive images for different screen sizes
+  - Compress all images to appropriate quality levels
+- **Caching Strategy**:
+  - Browser caching for static assets (CSS, JS, images)
+  - API response caching for relatively static data (user profiles, organization info)
+  - Service worker for offline-first experience (future enhancement)
+
+**API Performance:**
+- **Response Optimization**: Send only required data fields to minimize payload size
+- **Optimistic UI**: Immediate UI updates with rollback on failure
+- **Debounced Requests**: Debounce search and filter operations
+- **Connection Pooling**: Efficient database connection management
+
+**Performance Targets:**
+- Initial page load: < 3 seconds on 3G connection
+- Task list rendering: < 500ms for up to 200 tasks
+- Task creation/update: < 200ms perceived response time
+- Search results: < 1 second for any query
+
 ---
 
 ### 14. Data & Privacy
@@ -157,6 +225,35 @@ Upon first login, users complete a short setup flow:
 - Users can delete accounts via settings portal
 - All account deletions are final
 - Terms of Service and Privacy Policy required
+
+#### 14.1 Privacy Best Practices
+
+- **Data Minimization**: Only collect data essential for application functionality
+  - Required: Email, name, clinic name, target launch date
+  - Optional: Clinic location, phone number
+  - Never collect: SSN, financial information, personal health information
+- **User Consent**: 
+  - Clear opt-in for marketing communications during signup
+  - Separate consent for product updates vs promotional emails
+  - Easy opt-out mechanism in all communications
+- **Data Retention Policy**:
+  - Active user data: Retained as long as account is active
+  - Deleted account data: Permanently purged within 30 days
+  - Backup data: Retained for 90 days maximum for disaster recovery
+  - Analytics data: Anonymized and aggregated, retained for 2 years
+- **Data Access Controls**:
+  - User data accessible only to authorized personnel on need-to-know basis
+  - All data access logged and auditable
+  - No sharing of user data with third parties except as required by law
+- **Data Portability**: Users can export their data in JSON format
+- **Privacy by Design**: 
+  - Default privacy settings favor user privacy
+  - Minimal data collection at signup
+  - Clear privacy notices at point of data collection
+- **Third-Party Integrations**:
+  - ConvertKit integration: Only email and consent status shared
+  - Analytics: Use privacy-focused analytics (no personal data tracking)
+  - No social media tracking pixels or unnecessary third-party scripts
 
 ---
 
