@@ -1,86 +1,46 @@
 import React from 'react'
 import { Routes, Route } from 'react-router-dom'
-import { useAuth } from '../auth/AuthProvider'
-import { Building2, LogOut, Settings as SettingsIcon, Home, Users } from 'lucide-react'
-import { Link, useLocation } from 'react-router-dom'
+import Navigation from '../navigation/Navigation'
+import Breadcrumbs from '../navigation/Breadcrumbs'
 import Settings from '../settings/Settings'
+import { Building2 } from 'lucide-react'
 
 const Dashboard = () => {
-  const { user, signOut } = useAuth()
-  const location = useLocation()
-
-  const handleSignOut = async () => {
-    await signOut()
-  }
-
-  const isActive = (path) => {
-    if (path === '/') {
-      return location.pathname === '/' || location.pathname === '/dashboard'
-    }
-    return location.pathname.startsWith(path)
-  }
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b border-gray-200">
-        <div className="container mx-auto px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <Building2 className="h-8 w-8 text-primary" />
-              <h1 className="text-xl font-semibold text-gray-900">
-                DPC Startup Task Manager
-              </h1>
-            </div>
-            <div className="flex items-center space-x-4">
-              <span className="text-sm text-gray-600">
-                Welcome, {user?.user_metadata?.full_name || user?.email}
-              </span>
-              <button
-                onClick={handleSignOut}
-                className="btn btn-secondary flex items-center"
-              >
-                <LogOut className="w-4 h-4 mr-2" />
-                Sign Out
-              </button>
-            </div>
-          </div>
-        </div>
-      </header>
-
-      {/* Navigation */}
-      <nav className="bg-white border-b border-gray-200">
-        <div className="container mx-auto px-6">
-          <div className="flex space-x-8">
-            <Link
-              to="/"
-              className={`flex items-center px-3 py-4 text-sm font-medium border-b-2 transition-colors ${
-                isActive('/') 
-                  ? 'border-primary text-primary' 
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-            >
-              <Home className="w-4 h-4 mr-2" />
-              Dashboard
-            </Link>
-            <Link
-              to="/settings"
-              className={`flex items-center px-3 py-4 text-sm font-medium border-b-2 transition-colors ${
-                isActive('/settings') 
-                  ? 'border-primary text-primary' 
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-            >
-              <SettingsIcon className="w-4 h-4 mr-2" />
-              Settings
-            </Link>
-          </div>
-        </div>
-      </nav>
+      <Navigation />
+      <Breadcrumbs />
 
       {/* Main Content */}
       <Routes>
         <Route path="/settings" element={<Settings />} />
+        <Route path="/tasks" element={
+          <main className="container mx-auto px-6 py-8">
+            <div className="bg-white rounded-lg shadow-sm p-8 text-center">
+              <Building2 className="icon-lg mx-auto mb-4" />
+              <h2 className="text-2xl font-semibold text-gray-900 mb-4">
+                Task Management Coming Soon
+              </h2>
+              <p className="text-gray-600">
+                We're working on bringing you comprehensive task management features.
+              </p>
+            </div>
+          </main>
+        } />
+        <Route path="/team" element={
+          <main className="container mx-auto px-6 py-8">
+            <div className="bg-white rounded-lg shadow-sm p-8 text-center">
+              <Building2 className="icon-lg mx-auto mb-4" />
+              <h2 className="text-2xl font-semibold text-gray-900 mb-4">
+                Team Management Coming Soon
+              </h2>
+              <p className="text-gray-600">
+                Team collaboration features will be available soon.
+              </p>
+            </div>
+          </main>
+        } />
         <Route path="/*" element={
           <main className="container mx-auto px-6 py-8">
             <div className="bg-white rounded-lg shadow-sm p-8 text-center">
