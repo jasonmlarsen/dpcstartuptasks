@@ -73,16 +73,6 @@ const Dashboard = () => {
           </main>
         } />
         <Route path="/*" element={
-              <h2 className="text-2xl font-semibold text-gray-900 mb-4">
-                Team Management Coming Soon
-              </h2>
-              <p className="text-gray-600">
-                Team collaboration features will be available soon.
-              </p>
-            </div>
-          </main>
-        } />
-        <Route path="/*" element={
           <main className="container mx-auto px-6 py-8">
             <div className="bg-white rounded-lg shadow-sm p-8 text-center">
               <CheckSquare className="icon-lg mx-auto mb-4" />
