@@ -123,7 +123,7 @@ const Navigation = ({ onAddTask }) => {
               {/* Add Task Button */}
               <button
                 onClick={onAddTask}
-                className="btn btn-primary flex items-center text-sm py-2 px-4"
+                className="flex items-center text-sm py-2 px-4 rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-100 font-medium transition-all duration-200"
               >
                 <Plus className="w-4 h-4 mr-2" />
                 <span className="hidden sm:block">Add Task</span>
