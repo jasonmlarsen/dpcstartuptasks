@@ -1,23 +1,36 @@
 import React from 'react'
-import { Routes, Route, useNavigate } from 'react-router-dom'
+import { Routes, Route, useNavigate, useLocation } from 'react-router-dom'
 import { useState, useEffect } from 'react'
+import { useAuth } from '../auth/AuthProvider'
 import Navigation from '../navigation/Navigation'
 import Breadcrumbs from '../navigation/Breadcrumbs'
 import Settings from '../settings/Settings'
 import AddTaskModal from '../tasks/AddTaskModal'
-import { getCurrentUserOrganization, fetchOrganizationUsers } from '../../lib/supabase'
+import TaskList from '../tasks/TaskList'
+import { getCurrentUserOrganization, fetchOrganizationUsers, fetchTasks } from '../../lib/supabase'
 import { CheckSquare, Users, UserPlus } from 'lucide-react'
 
 const Dashboard = () => {
+  const { user } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation()
   const [isAddTaskModalOpen, setIsAddTaskModalOpen] = useState(false)
   const [teamMembers, setTeamMembers] = useState([])
   const [loading, setLoading] = useState(true)
+  const [tasks, setTasks] = useState([])
+  const [tasksLoading, setTasksLoading] = useState(true)
+  const [pageTitle, setPageTitle] = useState('')
+  const [emptyMessage, setEmptyMessage] = useState('')
 
   useEffect(() => {
     loadTeamMembers()
   }, [])
 
+  useEffect(() => {
+    if (user) {
+      loadTasks()
+    }
+  }, [location.pathname, user])
   const loadTeamMembers = async () => {
     try {
       const userData = await getCurrentUserOrganization()
@@ -32,6 +45,49 @@ const Dashboard = () => {
     }
   }
 
+  const loadTasks = async () => {
+    try {
+      setTasksLoading(true)
+      const userData = await getCurrentUserOrganization()
+      if (!userData || !userData.organization) {
+        setTasks([])
+        return
+      }
+
+      const organizationId = userData.organization.id
+      let filters = { organizationId }
+      let title = ''
+      let emptyMsg = ''
+
+      // Determine filters based on current route
+      switch (location.pathname) {
+        case '/my-tasks':
+          filters.assignedToUserId = user.id
+          title = 'My Tasks'
+          emptyMsg = 'No tasks assigned to you yet. Create a new task or ask a team member to assign one to you.'
+          break
+        case '/team':
+          filters.excludeAssignedToUserId = user.id
+          title = 'Team Tasks'
+          emptyMsg = 'No tasks assigned to other team members yet. Create tasks and assign them to your team.'
+          break
+        default:
+          title = 'All Tasks'
+          emptyMsg = 'No tasks created yet. Click "Add Task" to create your first task.'
+          break
+      }
+
+      const fetchedTasks = await fetchTasks(filters)
+      setTasks(fetchedTasks)
+      setPageTitle(title)
+      setEmptyMessage(emptyMsg)
+    } catch (err) {
+      console.error('Error loading tasks:', err)
+      setTasks([])
+    } finally {
+      setTasksLoading(false)
+    }
+  }
   const openAddTaskModal = () => {
     setIsAddTaskModalOpen(true)
   }
@@ -43,7 +99,8 @@ const Dashboard = () => {
   const handleTaskAdded = (newTask) => {
     // Task was successfully created
     console.log('New task created:', newTask)
-    // You can add additional logic here like refreshing task lists
+    // Refresh the task list
+    loadTasks()
   }
 
   const handleInviteTeamMembers = () => {
@@ -66,19 +123,17 @@ const Dashboard = () => {
       {/* Main Content */}
       <Routes>
         <Route path="/settings" element={<Settings />} />
-        <Route path="/my-tasks" element={
-          <main className="container mx-auto px-6 py-8">
-            <div className="bg-white rounded-lg shadow-sm p-8 text-center">
-              <CheckSquare className="icon-lg mx-auto mb-4" />
-              <h2 className="text-2xl font-semibold text-gray-900 mb-4">
-                My Tasks Coming Soon
-              </h2>
-              <p className="text-gray-600">
-                View and manage tasks assigned specifically to you.
-              </p>
-            </div>
-          </main>
-        } />
+        <Route 
+          path="/my-tasks" 
+          element={
+            <TaskList 
+              tasks={tasks} 
+              title={pageTitle} 
+              emptyMessage={emptyMessage}
+              loading={tasksLoading}
+            />
+          } 
+        />
         <Route path="/team" element={
           <main className="container mx-auto px-6 py-8">
             <div className="bg-white rounded-lg shadow-sm p-8">
@@ -109,37 +164,29 @@ const Dashboard = () => {
                   </button>
                 </div>
                 
-                <div className="text-center">
-                  <p className="text-sm text-gray-500">
-                    Team collaboration features will be available soon.
-                  </p>
+                <div className="mb-8">
+                  <TaskList 
+                    tasks={tasks} 
+                    title="Team Tasks" 
+                    emptyMessage={emptyMessage}
+                    loading={tasksLoading}
+                  />
                 </div>
               </div>
             </div>
           </main>
         } />
-        <Route path="/*" element={
-          <main className="container mx-auto px-6 py-8">
-            <div className="bg-white rounded-lg shadow-sm p-8 text-center">
-              <CheckSquare className="icon-lg mx-auto mb-4" />
-              <h2 className="text-2xl font-semibold text-gray-900 mb-4">
-                All Tasks Coming Soon
-              </h2>
-              <p className="text-gray-600 mb-6">
-                View and manage all tasks for your clinic.
-              </p>
-              <div className="bg-gray-50 rounded-lg p-6">
-                <h3 className="text-lg font-medium text-gray-900 mb-2">Coming Soon:</h3>
-                <ul className="text-left text-gray-600 space-y-2">
-                  <li>• Preloaded startup tasks for DPC clinics</li>
-                  <li>• Task assignment and collaboration</li>
-                  <li>• Progress tracking and due dates</li>
-                  <li>• Comments and team communication</li>
-                </ul>
-              </div>
-            </div>
-          </main>
-        } />
+        <Route 
+          path="/*" 
+          element={
+            <TaskList 
+              tasks={tasks} 
+              title={pageTitle} 
+              emptyMessage={emptyMessage}
+              loading={tasksLoading}
+            />
+          } 
+        />
       </Routes>
     </div>
   )

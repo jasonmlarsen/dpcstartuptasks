@@ -66,3 +66,38 @@ export const fetchOrganizationUsers = async (organizationId) => {
 
   return users || []
 }
+// Helper function to fetch tasks with filters
+export const fetchTasks = async (filters = {}) => {
+  const { organizationId, assignedToUserId, excludeAssignedToUserId } = filters
+
+  if (!organizationId) return []
+
+  let query = supabase
+    .from('tasks')
+    .select(`
+      *,
+      assigned_user:users!tasks_assigned_to_fkey(id, full_name, email),
+      created_by_user:users!tasks_created_by_fkey(id, full_name, email),
+      subtasks(id, title, is_completed)
+    `)
+    .eq('organization_id', organizationId)
+    .order('created_at', { ascending: false })
+
+  // Apply filters
+  if (assignedToUserId) {
+    query = query.eq('assigned_to', assignedToUserId)
+  }
+
+  if (excludeAssignedToUserId) {
+    query = query.neq('assigned_to', excludeAssignedToUserId)
+  }
+
+  const { data: tasks, error } = await query
+
+  if (error) {
+    console.error('Error fetching tasks:', error)
+    return []
+  }
+
+  return tasks || []
+}
