@@ -51,12 +51,6 @@ const Navigation = () => {
       icon: Users,
       description: 'Manage team members',
       badge: 'Coming Soon'
-    },
-    {
-      name: 'Settings',
-      path: '/settings',
-      icon: SettingsIcon,
-      description: 'Account and clinic settings'
     }
   ]
 
