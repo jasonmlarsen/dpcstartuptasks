@@ -3,14 +3,13 @@ import { Link, useLocation } from 'react-router-dom'
 import { useAuth } from '../auth/AuthProvider'
 import { 
   Building2, 
-  Home, 
   Settings as SettingsIcon, 
   Users, 
   CheckSquare,
+  User,
   Menu,
   X,
   LogOut,
-  User,
   ChevronDown
 } from 'lucide-react'
 
@@ -26,24 +25,23 @@ const Navigation = () => {
 
   const isActive = (path) => {
     if (path === '/') {
-      return location.pathname === '/' || location.pathname === '/dashboard'
+      return location.pathname === '/'
     }
     return location.pathname.startsWith(path)
   }
 
   const navigationItems = [
     {
-      name: 'Dashboard',
+      name: 'All Tasks',
       path: '/',
-      icon: Home,
-      description: 'Overview and quick actions'
+      icon: CheckSquare,
+      description: 'View all tasks for your clinic'
     },
     {
-      name: 'Tasks',
-      path: '/tasks',
-      icon: CheckSquare,
-      description: 'Manage your startup tasks',
-      badge: 'Coming Soon'
+      name: 'My Tasks',
+      path: '/my-tasks',
+      icon: User,
+      description: 'View tasks assigned to you'
     },
     {
       name: 'Team',

@@ -1,17 +1,16 @@
 import React from 'react'
 import { Link, useLocation } from 'react-router-dom'
-import { ChevronRight, Home } from 'lucide-react'
+import { ChevronRight, CheckSquare, User, Users } from 'lucide-react'
 
 const Breadcrumbs = () => {
   const location = useLocation()
   
   // Define breadcrumb mappings
   const breadcrumbMap = {
-    '/': { name: 'Dashboard', icon: Home },
-    '/dashboard': { name: 'Dashboard', icon: Home },
+    '/': { name: 'All Tasks', icon: CheckSquare },
+    '/my-tasks': { name: 'My Tasks', icon: User },
     '/settings': { name: 'Settings' },
-    '/tasks': { name: 'Tasks' },
-    '/team': { name: 'Team' }
+    '/team': { name: 'Team', icon: Users }
   }
 
   // Generate breadcrumb items
@@ -21,10 +20,10 @@ const Breadcrumbs = () => {
 
     // Always start with Dashboard
     breadcrumbs.push({
-      name: 'Dashboard',
+      name: 'All Tasks',
       path: '/',
-      icon: Home,
-      isLast: pathSegments.length === 0 || location.pathname === '/dashboard'
+      icon: CheckSquare,
+      isLast: pathSegments.length === 0
     })
 
     // Add additional segments
