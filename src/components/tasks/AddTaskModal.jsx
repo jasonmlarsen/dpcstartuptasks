@@ -11,7 +11,7 @@ const AddTaskModal = ({ isOpen, onClose, onTaskAdded, teamMembers = [] }) => {
   const [formData, setFormData] = useState({
     title: '',
     dueDate: '',
-    assignedTo: '',
+    assignedTo: user?.id || '',
     resources: '',
     notes: '',
     subtasks: ['']
@@ -52,7 +52,7 @@ const AddTaskModal = ({ isOpen, onClose, onTaskAdded, teamMembers = [] }) => {
     setFormData({
       title: '',
       dueDate: '',
-      assignedTo: '',
+      assignedTo: user?.id || '',
       resources: '',
       notes: '',
       subtasks: ['']
@@ -92,7 +92,7 @@ const AddTaskModal = ({ isOpen, onClose, onTaskAdded, teamMembers = [] }) => {
         is_completed: false,
         is_preloaded: false,
         created_by: user.id,
-        assigned_to: formData.assignedTo || null,
+        assigned_to: formData.assignedTo,
         due_date: formData.dueDate || null,
         resources: formData.resources.trim() || null,
         notes: formData.notes.trim() || null
@@ -201,7 +201,6 @@ const AddTaskModal = ({ isOpen, onClose, onTaskAdded, teamMembers = [] }) => {
                 onChange={(e) => handleInputChange('assignedTo', e.target.value)}
                 disabled={loading}
               >
-                <option value="">Unassigned</option>
                 {teamMembers.map((member) => (
                   <option key={member.id} value={member.id}>
                     {member.full_name}
