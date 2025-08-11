@@ -1,11 +1,16 @@
 import React from 'react'
-import { Routes, Route } from 'react-router-dom'
+import { Routes, Route, useNavigate } from 'react-router-dom'
 import Navigation from '../navigation/Navigation'
 import Breadcrumbs from '../navigation/Breadcrumbs'
 import Settings from '../settings/Settings'
-import { CheckSquare } from 'lucide-react'
+import { CheckSquare, Users, UserPlus } from 'lucide-react'
 
 const Dashboard = () => {
+  const navigate = useNavigate()
+
+  const handleInviteTeamMembers = () => {
+    navigate('/settings')
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -30,8 +35,44 @@ const Dashboard = () => {
         } />
         <Route path="/team" element={
           <main className="container mx-auto px-6 py-8">
-            <div className="bg-white rounded-lg shadow-sm p-8 text-center">
-              <CheckSquare className="icon-lg mx-auto mb-4" />
+            <div className="bg-white rounded-lg shadow-sm p-8">
+              <div className="text-center mb-8">
+                <Users className="icon-lg mx-auto mb-4" />
+                <h2 className="text-2xl font-semibold text-gray-900 mb-4">
+                  Team Management
+                </h2>
+                <p className="text-gray-600 mb-6">
+                  Collaborate with your team members to launch your clinic successfully.
+                </p>
+              </div>
+              
+              <div className="max-w-md mx-auto">
+                <div className="bg-gray-50 rounded-lg p-6 mb-6">
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">
+                    Invite Team Members
+                  </h3>
+                  <p className="text-gray-600 mb-4">
+                    Add up to 3 team members to collaborate on your clinic startup tasks.
+                  </p>
+                  <button
+                    onClick={handleInviteTeamMembers}
+                    className="btn btn-primary flex items-center w-full justify-center"
+                  >
+                    <UserPlus className="w-4 h-4 mr-2" />
+                    Manage Team & Send Invitations
+                  </button>
+                </div>
+                
+                <div className="text-center">
+                  <p className="text-sm text-gray-500">
+                    Team collaboration features will be available soon.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </main>
+        } />
+        <Route path="/*" element={
               <h2 className="text-2xl font-semibold text-gray-900 mb-4">
                 Team Management Coming Soon
               </h2>
