@@ -1,12 +1,50 @@
 import React from 'react'
 import { Routes, Route, useNavigate } from 'react-router-dom'
+import { useState, useEffect } from 'react'
 import Navigation from '../navigation/Navigation'
 import Breadcrumbs from '../navigation/Breadcrumbs'
 import Settings from '../settings/Settings'
+import AddTaskModal from '../tasks/AddTaskModal'
+import { getCurrentUserOrganization, fetchOrganizationUsers } from '../../lib/supabase'
 import { CheckSquare, Users, UserPlus } from 'lucide-react'
 
 const Dashboard = () => {
   const navigate = useNavigate()
+  const [isAddTaskModalOpen, setIsAddTaskModalOpen] = useState(false)
+  const [teamMembers, setTeamMembers] = useState([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    loadTeamMembers()
+  }, [])
+
+  const loadTeamMembers = async () => {
+    try {
+      const userData = await getCurrentUserOrganization()
+      if (userData && userData.organization) {
+        const members = await fetchOrganizationUsers(userData.organization.id)
+        setTeamMembers(members)
+      }
+    } catch (err) {
+      console.error('Error loading team members:', err)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const openAddTaskModal = () => {
+    setIsAddTaskModalOpen(true)
+  }
+
+  const closeAddTaskModal = () => {
+    setIsAddTaskModalOpen(false)
+  }
+
+  const handleTaskAdded = (newTask) => {
+    // Task was successfully created
+    console.log('New task created:', newTask)
+    // You can add additional logic here like refreshing task lists
+  }
 
   const handleInviteTeamMembers = () => {
     navigate('/settings')
@@ -14,8 +52,16 @@ const Dashboard = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Navigation />
+      <Navigation onAddTask={openAddTaskModal} />
       <Breadcrumbs />
+      
+      {/* Add Task Modal */}
+      <AddTaskModal
+        isOpen={isAddTaskModalOpen}
+        onClose={closeAddTaskModal}
+        onTaskAdded={handleTaskAdded}
+        teamMembers={teamMembers}
+      />
 
       {/* Main Content */}
       <Routes>

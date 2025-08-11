@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { useAuth } from '../auth/AuthProvider'
-import { supabase, getCurrentUserOrganization } from '../../lib/supabase'
+import { supabase, getCurrentUserOrganization, fetchOrganizationUsers } from '../../lib/supabase'
 import { Building2, Calendar, MapPin, User, Users, Save, AlertCircle, UserPlus } from 'lucide-react'
 
 const Settings = () => {
@@ -58,14 +58,16 @@ const Settings = () => {
     try {
       const userData = await getCurrentUserOrganization()
       if (userData && userData.organization) {
-        const { data: members, error } = await supabase
+        const members = await fetchOrganizationUsers(userData.organization.id)
+        // Add created_at for display purposes (fetch from full user data)
+        const { data: fullMembers, error } = await supabase
           .from('users')
           .select('id, email, full_name, created_at')
           .eq('organization_id', userData.organization.id)
           .order('created_at', { ascending: true })
-
+        
         if (error) throw error
-        setTeamMembers(members || [])
+        setTeamMembers(fullMembers || [])
       }
     } catch (err) {
       console.error('Error loading team members:', err)

@@ -10,10 +10,11 @@ import {
   Menu,
   X,
   LogOut,
-  ChevronDown
+  ChevronDown,
+  Plus
 } from 'lucide-react'
 
-const Navigation = () => {
+const Navigation = ({ onAddTask }) => {
   const { user, signOut } = useAuth()
   const location = useLocation()
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
@@ -119,6 +120,16 @@ const Navigation = () => {
 
             {/* User Menu and Mobile Toggle */}
             <div className="flex items-center space-x-4">
+              {/* Add Task Button */}
+              <button
+                onClick={onAddTask}
+                className="btn btn-primary flex items-center text-sm py-2 px-4"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                <span className="hidden sm:block">Add Task</span>
+                <span className="sm:hidden">Add</span>
+              </button>
+
               {/* User Menu */}
               <div className="relative">
                 <button

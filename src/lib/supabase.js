@@ -48,3 +48,21 @@ export const needsOnboarding = async () => {
 
   return false
 }
+
+// Helper function to fetch organization users
+export const fetchOrganizationUsers = async (organizationId) => {
+  if (!organizationId) return []
+
+  const { data: users, error } = await supabase
+    .from('users')
+    .select('id, email, full_name')
+    .eq('organization_id', organizationId)
+    .order('full_name', { ascending: true })
+
+  if (error) {
+    console.error('Error fetching organization users:', error)
+    return []
+  }
+
+  return users || []
+}
