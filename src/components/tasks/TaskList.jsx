@@ -53,8 +53,9 @@ const TaskList = ({ tasks = [], title, emptyMessage, loading = false, onTaskUpda
           <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
             <div className="grid grid-cols-12 gap-4 items-center text-sm font-medium text-gray-700">
               <div className="col-span-1"></div>
-              <div className="col-span-5">Task</div>
-              <div className="col-span-3">Assigned To</div>
+              <div className="col-span-4">Task</div>
+              <div className="col-span-2">Assigned To</div>
+              <div className="col-span-2">Due Date</div>
               <div className="col-span-2">Category</div>
               <div className="col-span-1">Subtasks</div>
             </div>
@@ -90,7 +91,7 @@ const TaskList = ({ tasks = [], title, emptyMessage, loading = false, onTaskUpda
                 </div>
 
                 {/* Task Title */}
-                <div className="col-span-5">
+                <div className="col-span-4">
                   <h3 className={`text-sm font-medium ${
                     task.is_completed 
                       ? 'text-gray-500 line-through' 
@@ -101,9 +102,23 @@ const TaskList = ({ tasks = [], title, emptyMessage, loading = false, onTaskUpda
                 </div>
 
                 {/* Assigned User */}
-                <div className="col-span-3">
+                <div className="col-span-2">
                   <span className="text-sm text-gray-600">
                     {task.assigned_user ? task.assigned_user.full_name : 'Unassigned'}
+                  </span>
+                </div>
+
+                {/* Due Date */}
+                <div className="col-span-2">
+                  <span className="text-sm text-gray-600">
+                    {task.due_date 
+                      ? new Date(task.due_date).toLocaleDateString('en-US', {
+                          month: 'short',
+                          day: 'numeric',
+                          year: 'numeric'
+                        })
+                      : '—'
+                    }
                   </span>
                 </div>
 
