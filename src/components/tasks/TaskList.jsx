@@ -1,9 +1,16 @@
 import React from 'react'
 import { CheckSquare, User, Tag, List } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
+import TaskDetailModal from './TaskDetailModal'
 
-const TaskList = ({ tasks = [], title, emptyMessage, loading = false, onTaskUpdate }) => {
+const TaskList = ({ tasks = [], title, emptyMessage, loading = false, onTaskUpdate, teamMembers = [] }) => {
+  const [selectedTask, setSelectedTask] = React.useState(null)
+  const [isDetailModalOpen, setIsDetailModalOpen] = React.useState(false)
+
   const handleTaskToggle = async (taskId, currentStatus) => {
+    // Prevent event bubbling when clicking checkbox
+    event.stopPropagation()
+    
     try {
       const { error } = await supabase
         .from('tasks')
@@ -21,6 +28,23 @@ const TaskList = ({ tasks = [], title, emptyMessage, loading = false, onTaskUpda
     }
   }
 
+  const handleTaskClick = (task) => {
+    setSelectedTask(task)
+    setIsDetailModalOpen(true)
+  }
+
+  const handleCloseDetailModal = () => {
+    setIsDetailModalOpen(false)
+    setSelectedTask(null)
+  }
+
+  const handleTaskUpdated = () => {
+    // Refresh the task list
+    if (onTaskUpdate) {
+      onTaskUpdate()
+    }
+  }
+
   if (loading) {
     return (
       <main className="container mx-auto px-6 py-8">
@@ -34,6 +58,15 @@ const TaskList = ({ tasks = [], title, emptyMessage, loading = false, onTaskUpda
 
   return (
     <main className="container mx-auto px-6 py-8">
+      {/* Task Detail Modal */}
+      <TaskDetailModal
+        isOpen={isDetailModalOpen}
+        onClose={handleCloseDetailModal}
+        task={selectedTask}
+        onTaskUpdated={handleTaskUpdated}
+        teamMembers={teamMembers}
+      />
+
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900 mb-2">{title}</h1>
         <p className="text-gray-600">
@@ -65,9 +98,10 @@ const TaskList = ({ tasks = [], title, emptyMessage, loading = false, onTaskUpda
           {tasks.map((task) => (
             <div 
               key={task.id} 
-              className={`px-6 py-4 border-b border-gray-100 last:border-b-0 hover:bg-gray-50 transition-colors duration-150 ${
+              className={`px-6 py-4 border-b border-gray-100 last:border-b-0 hover:bg-gray-50 transition-colors duration-150 cursor-pointer ${
                 task.is_completed ? 'opacity-60' : ''
               }`}
+              onClick={() => handleTaskClick(task)}
             >
               <div className="grid grid-cols-12 gap-4 items-center">
                 {/* Checkbox */}
