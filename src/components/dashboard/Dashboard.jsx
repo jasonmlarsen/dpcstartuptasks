@@ -131,6 +131,7 @@ const Dashboard = () => {
               title={pageTitle} 
               emptyMessage={emptyMessage}
               loading={tasksLoading}
+              onTaskUpdate={loadTasks}
             />
           } 
         />
@@ -170,6 +171,7 @@ const Dashboard = () => {
                     title="Team Tasks" 
                     emptyMessage={emptyMessage}
                     loading={tasksLoading}
+                    onTaskUpdate={loadTasks}
                   />
                 </div>
               </div>
@@ -184,6 +186,7 @@ const Dashboard = () => {
               title={pageTitle} 
               emptyMessage={emptyMessage}
               loading={tasksLoading}
+              onTaskUpdate={loadTasks}
             />
           } 
         />
