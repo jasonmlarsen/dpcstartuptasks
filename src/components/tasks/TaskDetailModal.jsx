@@ -77,6 +77,10 @@ const TaskDetailModal = ({ isOpen, onClose, task, onTaskUpdated, teamMembers = [
     }
   }
 
+  // Calculate if all subtasks are completed
+  const allSubtasksCompleted = subtasks.length === 0 || subtasks.every(subtask => subtask.is_completed)
+  const isMainCheckboxDisabled = saving || (subtasks.length > 0 && !allSubtasksCompleted)
+
   const handleInputChange = (field, value) => {
     setFormData(prev => ({
       ...prev,
@@ -184,8 +188,28 @@ const TaskDetailModal = ({ isOpen, onClose, task, onTaskUpdated, teamMembers = [
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200">
-          <h2 className="text-xl font-semibold text-gray-900">Task Details</h2>
+        <div className="flex items-center justify-between p-4 border-b border-gray-200">
+          <div className="flex items-center space-x-3 flex-1">
+            <input
+              type="checkbox"
+              id="mainTaskCompleted"
+              className="w-5 h-5 text-primary border-gray-300 rounded focus:ring-primary"
+              checked={formData.isCompleted}
+              onChange={(e) => handleInputChange('isCompleted', e.target.checked)}
+              disabled={isMainCheckboxDisabled}
+            />
+            <input
+              type="text"
+              className="text-xl font-semibold text-gray-900 bg-transparent border-none outline-none flex-1"
+              value={formData.title}
+              onChange={(e) => handleInputChange('title', e.target.value)}
+              disabled={saving}
+              style={{
+                textDecoration: formData.isCompleted ? 'line-through' : 'none',
+                color: formData.isCompleted ? '#6b7280' : '#111827'
+              }}
+            />
+          </div>
           <button
             onClick={handleClose}
             className="p-2 hover:bg-gray-100 rounded-lg transition-colors duration-200"
@@ -201,41 +225,10 @@ const TaskDetailModal = ({ isOpen, onClose, task, onTaskUpdated, teamMembers = [
             <p className="text-gray-600">Loading task details...</p>
           </div>
         ) : (
-          <div className="p-6 space-y-6">
-            {/* Task Completion Status */}
-            <div className="flex items-center space-x-3">
-              <input
-                type="checkbox"
-                id="isCompleted"
-                className="w-5 h-5 text-primary border-gray-300 rounded focus:ring-primary"
-                checked={formData.isCompleted}
-                onChange={(e) => handleInputChange('isCompleted', e.target.checked)}
-                disabled={saving}
-              />
-              <label htmlFor="isCompleted" className="text-sm font-medium text-gray-700">
-                Mark as completed
-              </label>
-            </div>
-
-            {/* Task Title */}
-            <div className="form-group">
-              <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-2">
-                Task Title *
-              </label>
-              <input
-                type="text"
-                id="title"
-                className="form-input"
-                value={formData.title}
-                onChange={(e) => handleInputChange('title', e.target.value)}
-                required
-                disabled={saving}
-              />
-            </div>
-
+          <div className="p-4 space-y-4">
             {/* Category and Assignment */}
             <div className="form-row">
-              <div className="form-group">
+              <div>
                 <label htmlFor="category" className="block text-sm font-medium text-gray-700 mb-2">
                   Category
                 </label>
@@ -257,7 +250,7 @@ const TaskDetailModal = ({ isOpen, onClose, task, onTaskUpdated, teamMembers = [
                 </select>
               </div>
 
-              <div className="form-group">
+              <div>
                 <label htmlFor="assignedTo" className="block text-sm font-medium text-gray-700 mb-2">
                   <User className="w-4 h-4 inline mr-1" />
                   Assign To
@@ -280,7 +273,7 @@ const TaskDetailModal = ({ isOpen, onClose, task, onTaskUpdated, teamMembers = [
             </div>
 
             {/* Due Date */}
-            <div className="form-group">
+            <div>
               <label htmlFor="dueDate" className="block text-sm font-medium text-gray-700 mb-2">
                 <Calendar className="w-4 h-4 inline mr-1" />
                 Due Date
@@ -297,7 +290,7 @@ const TaskDetailModal = ({ isOpen, onClose, task, onTaskUpdated, teamMembers = [
             </div>
 
             {/* Resources */}
-            <div className="form-group">
+            <div>
               <label htmlFor="resources" className="block text-sm font-medium text-gray-700 mb-2">
                 <Link className="w-4 h-4 inline mr-1" />
                 Resources
@@ -314,7 +307,7 @@ const TaskDetailModal = ({ isOpen, onClose, task, onTaskUpdated, teamMembers = [
             </div>
 
             {/* Notes */}
-            <div className="form-group">
+            <div>
               <label htmlFor="notes" className="block text-sm font-medium text-gray-700 mb-2">
                 <FileText className="w-4 h-4 inline mr-1" />
                 Notes
@@ -332,7 +325,7 @@ const TaskDetailModal = ({ isOpen, onClose, task, onTaskUpdated, teamMembers = [
 
             {/* Subtasks */}
             {subtasks.length > 0 && (
-              <div className="form-group">
+              <div>
                 <label className="block text-sm font-medium text-gray-700 mb-3">
                   Subtasks ({subtasks.filter(s => s.is_completed).length}/{subtasks.length} completed)
                 </label>
@@ -364,7 +357,7 @@ const TaskDetailModal = ({ isOpen, onClose, task, onTaskUpdated, teamMembers = [
             )}
 
             {/* Comments */}
-            <div className="form-group">
+            <div>
               <label className="block text-sm font-medium text-gray-700 mb-3">
                 <MessageSquare className="w-4 h-4 inline mr-1" />
                 Comments ({comments.length})
