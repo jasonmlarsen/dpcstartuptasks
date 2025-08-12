@@ -102,22 +102,16 @@ const TaskList = ({ tasks = [], title, emptyMessage, loading = false, onTaskUpda
 
                 {/* Assigned User */}
                 <div className="col-span-3">
-                  <div className="flex items-center text-sm text-gray-600">
-                    <User className="w-4 h-4 mr-2 text-gray-400" />
-                    <span>
-                      {task.assigned_user ? task.assigned_user.full_name : 'Unassigned'}
-                    </span>
-                  </div>
+                  <span className="text-sm text-gray-600">
+                    {task.assigned_user ? task.assigned_user.full_name : 'Unassigned'}
+                  </span>
                 </div>
 
                 {/* Category */}
                 <div className="col-span-2">
-                  <div className="flex items-center">
-                    <Tag className="w-4 h-4 mr-2 text-gray-400" />
-                    <span className="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded-md font-medium">
-                      {task.category}
-                    </span>
-                  </div>
+                  <span className="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded-md font-medium">
+                    {task.category}
+                  </span>
                 </div>
 
                 {/* Subtasks Indicator */}
