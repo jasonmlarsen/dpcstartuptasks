@@ -1,23 +1,24 @@
 import React from 'react'
-import { Calendar, User, FileText, Link, CheckSquare, Clock, Users } from 'lucide-react'
+import { CheckSquare, User, Tag, List } from 'lucide-react'
+import { supabase } from '../../lib/supabase'
 
-const TaskList = ({ tasks = [], title, emptyMessage, loading = false }) => {
-  const formatDate = (dateString) => {
-    if (!dateString) return null
-    const date = new Date(dateString)
-    return date.toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
-    })
-  }
+const TaskList = ({ tasks = [], title, emptyMessage, loading = false, onTaskUpdate }) => {
+  const handleTaskToggle = async (taskId, currentStatus) => {
+    try {
+      const { error } = await supabase
+        .from('tasks')
+        .update({ is_completed: !currentStatus })
+        .eq('id', taskId)
 
-  const isOverdue = (dueDateString) => {
-    if (!dueDateString) return false
-    const dueDate = new Date(dueDateString)
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
-    return dueDate < today
+      if (error) throw error
+
+      // Notify parent component to refresh tasks
+      if (onTaskUpdate) {
+        onTaskUpdate()
+      }
+    } catch (err) {
+      console.error('Error updating task:', err)
+    }
   }
 
   if (loading) {
@@ -47,125 +48,90 @@ const TaskList = ({ tasks = [], title, emptyMessage, loading = false }) => {
           <p className="text-gray-600">{emptyMessage}</p>
         </div>
       ) : (
-        <div className="space-y-6">
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+          {/* Table Header */}
+          <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
+            <div className="grid grid-cols-12 gap-4 items-center text-sm font-medium text-gray-700">
+              <div className="col-span-1"></div>
+              <div className="col-span-5">Task</div>
+              <div className="col-span-3">Assigned To</div>
+              <div className="col-span-2">Category</div>
+              <div className="col-span-1">Subtasks</div>
+            </div>
+          </div>
+          
+          {/* Task List */}
           {tasks.map((task) => (
-            <div key={task.id} className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-              {/* Task Header */}
-              <div className="flex items-start justify-between mb-4">
-                <div className="flex-1">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">
+            <div 
+              key={task.id} 
+              className={`px-6 py-4 border-b border-gray-100 last:border-b-0 hover:bg-gray-50 transition-colors duration-150 ${
+                task.is_completed ? 'opacity-60' : ''
+              }`}
+            >
+              <div className="grid grid-cols-12 gap-4 items-center">
+                {/* Checkbox */}
+                <div className="col-span-1">
+                  {task.subtasks && task.subtasks.length > 0 ? (
+                    <div className="w-5 h-5 bg-gray-100 border border-gray-300 rounded flex items-center justify-center">
+                      <span className="text-xs text-gray-500">—</span>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => handleTaskToggle(task.id, task.is_completed)}
+                      className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors duration-150 ${
+                        task.is_completed
+                          ? 'bg-green-500 border-green-500 text-white'
+                          : 'border-gray-300 hover:border-primary'
+                      }`}
+                    >
+                      {task.is_completed && <CheckSquare className="w-3 h-3" />}
+                    </button>
+                  )}
+                </div>
+
+                {/* Task Title */}
+                <div className="col-span-5">
+                  <h3 className={`text-sm font-medium ${
+                    task.is_completed 
+                      ? 'text-gray-500 line-through' 
+                      : 'text-gray-900'
+                  }`}>
                     {task.title}
                   </h3>
-                  
-                  {/* Task Meta Information */}
-                  <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600">
-                    {/* Assigned To */}
-                    {task.assigned_user && (
-                      <div className="flex items-center">
-                        <User className="w-4 h-4 mr-1" />
-                        <span>{task.assigned_user.full_name}</span>
-                      </div>
-                    )}
-                    
-                    {/* Due Date */}
-                    {task.due_date && (
-                      <div className={`flex items-center ${
-                        isOverdue(task.due_date) ? 'text-red-600' : ''
-                      }`}>
-                        <Calendar className="w-4 h-4 mr-1" />
-                        <span>
-                          Due {formatDate(task.due_date)}
-                          {isOverdue(task.due_date) && ' (Overdue)'}
-                        </span>
-                      </div>
-                    )}
-                    
-                    {/* Category */}
-                    <div className="flex items-center">
-                      <span className="px-2 py-1 bg-gray-100 text-gray-700 rounded-md text-xs font-medium">
-                        {task.category}
+                </div>
+
+                {/* Assigned User */}
+                <div className="col-span-3">
+                  <div className="flex items-center text-sm text-gray-600">
+                    <User className="w-4 h-4 mr-2 text-gray-400" />
+                    <span>
+                      {task.assigned_user ? task.assigned_user.full_name : 'Unassigned'}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Category */}
+                <div className="col-span-2">
+                  <div className="flex items-center">
+                    <Tag className="w-4 h-4 mr-2 text-gray-400" />
+                    <span className="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded-md font-medium">
+                      {task.category}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Subtasks Indicator */}
+                <div className="col-span-1 text-center">
+                  {task.subtasks && task.subtasks.length > 0 && (
+                    <div className="flex items-center justify-center">
+                      <List className="w-4 h-4 text-gray-400" />
+                      <span className="ml-1 text-xs text-gray-500">
+                        {task.subtasks.length}
                       </span>
                     </div>
-                    
-                    {/* Created Date */}
-                    <div className="flex items-center text-gray-500">
-                      <Clock className="w-4 h-4 mr-1" />
-                      <span>Created {formatDate(task.created_at)}</span>
-                    </div>
-                  </div>
-                </div>
-                
-                {/* Task Status */}
-                <div className="ml-4">
-                  <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                    task.is_completed 
-                      ? 'bg-green-100 text-green-800' 
-                      : 'bg-yellow-100 text-yellow-800'
-                  }`}>
-                    {task.is_completed ? 'Completed' : 'In Progress'}
-                  </span>
+                  )}
                 </div>
               </div>
-
-              {/* Resources */}
-              {task.resources && (
-                <div className="mb-4">
-                  <div className="flex items-center mb-2">
-                    <Link className="w-4 h-4 mr-2 text-primary" />
-                    <h4 className="text-sm font-medium text-gray-900">Resources</h4>
-                  </div>
-                  <div className="bg-gray-50 rounded-md p-3">
-                    <p className="text-sm text-gray-700 whitespace-pre-wrap">{task.resources}</p>
-                  </div>
-                </div>
-              )}
-
-              {/* Notes */}
-              {task.notes && (
-                <div className="mb-4">
-                  <div className="flex items-center mb-2">
-                    <FileText className="w-4 h-4 mr-2 text-primary" />
-                    <h4 className="text-sm font-medium text-gray-900">Notes</h4>
-                  </div>
-                  <div className="bg-gray-50 rounded-md p-3">
-                    <p className="text-sm text-gray-700 whitespace-pre-wrap">{task.notes}</p>
-                  </div>
-                </div>
-              )}
-
-              {/* Subtasks */}
-              {task.subtasks && task.subtasks.length > 0 && (
-                <div>
-                  <div className="flex items-center mb-3">
-                    <CheckSquare className="w-4 h-4 mr-2 text-primary" />
-                    <h4 className="text-sm font-medium text-gray-900">
-                      Subtasks ({task.subtasks.filter(st => st.is_completed).length}/{task.subtasks.length} completed)
-                    </h4>
-                  </div>
-                  <div className="space-y-2">
-                    {task.subtasks.map((subtask) => (
-                      <div key={subtask.id} className="flex items-center">
-                        <div className={`w-4 h-4 rounded border-2 mr-3 flex items-center justify-center ${
-                          subtask.is_completed 
-                            ? 'bg-green-500 border-green-500' 
-                            : 'border-gray-300'
-                        }`}>
-                          {subtask.is_completed && (
-                            <CheckSquare className="w-3 h-3 text-white" />
-                          )}
-                        </div>
-                        <span className={`text-sm ${
-                          subtask.is_completed 
-                            ? 'text-gray-500 line-through' 
-                            : 'text-gray-700'
-                        }`}>
-                          {subtask.title}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
             </div>
           ))}
         </div>
