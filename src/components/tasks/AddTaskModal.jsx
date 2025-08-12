@@ -10,6 +10,7 @@ const AddTaskModal = ({ isOpen, onClose, onTaskAdded, teamMembers = [] }) => {
 
   const [formData, setFormData] = useState({
     title: '',
+    category: 'General',
     dueDate: '',
     assignedTo: user?.id || '',
     resources: '',
@@ -51,6 +52,7 @@ const AddTaskModal = ({ isOpen, onClose, onTaskAdded, teamMembers = [] }) => {
   const resetForm = () => {
     setFormData({
       title: '',
+      category: 'General',
       dueDate: '',
       assignedTo: user?.id || '',
       resources: '',
@@ -87,7 +89,7 @@ const AddTaskModal = ({ isOpen, onClose, onTaskAdded, teamMembers = [] }) => {
       const taskData = {
         organization_id: userData.organization.id,
         title: formData.title.trim(),
-        category: 'General',
+        category: formData.category,
         priority: 0,
         is_completed: false,
         is_preloaded: false,
@@ -169,6 +171,31 @@ const AddTaskModal = ({ isOpen, onClose, onTaskAdded, teamMembers = [] }) => {
               required
               disabled={loading}
             />
+          </div>
+
+          {/* Due Date and Assigned To */}
+          <div className="form-row">
+            <div className="form-group">
+              <label htmlFor="category" className="block text-sm font-medium text-gray-700 mb-2">
+                Category
+              </label>
+              <select
+                id="category"
+                className="form-input"
+                value={formData.category}
+                onChange={(e) => handleInputChange('category', e.target.value)}
+                disabled={loading}
+              >
+                <option value="General">General</option>
+                <option value="Legal">Legal</option>
+                <option value="Financial">Financial</option>
+                <option value="Marketing">Marketing</option>
+                <option value="Operations">Operations</option>
+                <option value="Clinical">Clinical</option>
+                <option value="Technology">Technology</option>
+                <option value="Insurance">Insurance</option>
+              </select>
+            </div>
           </div>
 
           {/* Due Date and Assigned To */}
