@@ -132,6 +132,7 @@ const Dashboard = () => {
               emptyMessage={emptyMessage}
               loading={tasksLoading}
               onTaskUpdate={loadTasks}
+              teamMembers={teamMembers}
             />
           } 
         />
@@ -172,6 +173,7 @@ const Dashboard = () => {
                     emptyMessage={emptyMessage}
                     loading={tasksLoading}
                     onTaskUpdate={loadTasks}
+                    teamMembers={teamMembers}
                   />
                 </div>
               </div>
@@ -187,6 +189,7 @@ const Dashboard = () => {
               emptyMessage={emptyMessage}
               loading={tasksLoading}
               onTaskUpdate={loadTasks}
+              teamMembers={teamMembers}
             />
           } 
         />
