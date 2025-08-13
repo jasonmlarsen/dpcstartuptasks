@@ -68,7 +68,15 @@ export const fetchOrganizationUsers = async (organizationId) => {
 }
 // Helper function to fetch tasks with filters
 export const fetchTasks = async (filters = {}) => {
-  const { organizationId, assignedToUserId, excludeAssignedToUserId } = filters
+  const { 
+    organizationId, 
+    assignedToUserId, 
+    excludeAssignedToUserId,
+    category,
+    showCompleted = false,
+    sortBy = 'created_at',
+    sortOrder = 'desc'
+  } = filters
 
   if (!organizationId) return []
 
@@ -81,7 +89,6 @@ export const fetchTasks = async (filters = {}) => {
       subtasks(id, title, is_completed)
     `)
     .eq('organization_id', organizationId)
-    .order('created_at', { ascending: false })
 
   // Apply filters
   if (assignedToUserId) {
@@ -90,6 +97,28 @@ export const fetchTasks = async (filters = {}) => {
 
   if (excludeAssignedToUserId) {
     query = query.neq('assigned_to', excludeAssignedToUserId)
+  }
+
+  // Filter by category
+  if (category && category !== 'All') {
+    query = query.eq('category', category)
+  }
+
+  // Hide completed tasks by default
+  if (!showCompleted) {
+    query = query.eq('is_completed', false)
+  }
+
+  // Apply sorting
+  const ascending = sortOrder === 'asc'
+  if (sortBy === 'due_date') {
+    // Handle null due dates by putting them at the end
+    query = query.order('due_date', { ascending, nullsLast: true })
+  } else if (sortBy === 'category') {
+    query = query.order('category', { ascending })
+  } else {
+    // Default to created_at
+    query = query.order('created_at', { ascending })
   }
 
   const { data: tasks, error } = await query

@@ -7,6 +7,7 @@ import Breadcrumbs from '../navigation/Breadcrumbs'
 import Settings from '../settings/Settings'
 import AddTaskModal from '../tasks/AddTaskModal'
 import TaskList from '../tasks/TaskList'
+import TaskFilterSortControls from '../tasks/TaskFilterSortControls'
 import { getCurrentUserOrganization, fetchOrganizationUsers, fetchTasks } from '../../lib/supabase'
 import { CheckSquare, Users, UserPlus } from 'lucide-react'
 
@@ -21,6 +22,15 @@ const Dashboard = () => {
   const [tasksLoading, setTasksLoading] = useState(true)
   const [pageTitle, setPageTitle] = useState('')
   const [emptyMessage, setEmptyMessage] = useState('')
+  
+  // Filter and sort state
+  const [filters, setFilters] = useState({
+    showCompleted: false,
+    category: 'All',
+    sortBy: 'created_at',
+    sortOrder: 'desc',
+    assignedTo: ''
+  })
 
   useEffect(() => {
     loadTeamMembers()
@@ -30,7 +40,8 @@ const Dashboard = () => {
     if (user) {
       loadTasks()
     }
-  }, [location.pathname, user])
+  }, [location.pathname, user, filters])
+
   const loadTeamMembers = async () => {
     try {
       const userData = await getCurrentUserOrganization()
@@ -55,19 +66,32 @@ const Dashboard = () => {
       }
 
       const organizationId = userData.organization.id
-      let filters = { organizationId }
+      let taskFilters = { 
+        organizationId,
+        showCompleted: filters.showCompleted,
+        category: filters.category,
+        sortBy: filters.sortBy,
+        sortOrder: filters.sortOrder
+      }
       let title = ''
       let emptyMsg = ''
 
       // Determine filters based on current route
       switch (location.pathname) {
         case '/my-tasks':
-          filters.assignedToUserId = user.id
+          taskFilters.assignedToUserId = user.id
           title = 'My Tasks'
           emptyMsg = 'No tasks assigned to you yet. Create a new task or ask a team member to assign one to you.'
           break
         case '/team':
-          filters.excludeAssignedToUserId = user.id
+          // Handle team page filtering
+          if (filters.assignedTo === 'unassigned') {
+            taskFilters.assignedToUserId = null
+          } else if (filters.assignedTo) {
+            taskFilters.assignedToUserId = filters.assignedTo
+          } else {
+            taskFilters.excludeAssignedToUserId = user.id
+          }
           title = 'Team Tasks'
           emptyMsg = 'No tasks assigned to other team members yet. Create tasks and assign them to your team.'
           break
@@ -77,7 +101,7 @@ const Dashboard = () => {
           break
       }
 
-      const fetchedTasks = await fetchTasks(filters)
+      const fetchedTasks = await fetchTasks(taskFilters)
       setTasks(fetchedTasks)
       setPageTitle(title)
       setEmptyMessage(emptyMsg)
@@ -88,6 +112,7 @@ const Dashboard = () => {
       setTasksLoading(false)
     }
   }
+
   const openAddTaskModal = () => {
     setIsAddTaskModalOpen(true)
   }
@@ -105,6 +130,15 @@ const Dashboard = () => {
 
   const handleInviteTeamMembers = () => {
     navigate('/settings')
+  }
+
+  const handleFiltersChange = (newFilters) => {
+    setFilters(newFilters)
+  }
+
+  // Helper function to determine if we should show filter controls
+  const shouldShowFilters = () => {
+    return ['/', '/my-tasks', '/team'].includes(location.pathname)
   }
 
   return (
@@ -126,18 +160,34 @@ const Dashboard = () => {
         <Route 
           path="/my-tasks" 
           element={
-            <TaskList 
-              tasks={tasks} 
-              title={pageTitle} 
-              emptyMessage={emptyMessage}
-              loading={tasksLoading}
-              onTaskUpdate={loadTasks}
-              teamMembers={teamMembers}
-            />
+            <div>
+              <div className="container mx-auto px-6 pt-8">
+                <TaskFilterSortControls
+                  filters={filters}
+                  onFiltersChange={handleFiltersChange}
+                  teamMembers={teamMembers}
+                  showTeamFilter={false}
+                />
+              </div>
+              <TaskList 
+                tasks={tasks} 
+                title={pageTitle} 
+                emptyMessage={emptyMessage}
+                loading={tasksLoading}
+                onTaskUpdate={loadTasks}
+                teamMembers={teamMembers}
+              />
+            </div>
           } 
         />
         <Route path="/team" element={
           <main className="container mx-auto px-6 py-8">
+            <TaskFilterSortControls
+              filters={filters}
+              onFiltersChange={handleFiltersChange}
+              teamMembers={teamMembers}
+              showTeamFilter={true}
+            />
             <div className="bg-white rounded-lg shadow-sm p-8">
               <div className="text-center mb-8">
                 <Users className="icon-lg mx-auto mb-4" />
@@ -166,31 +216,39 @@ const Dashboard = () => {
                   </button>
                 </div>
                 
-                <div className="mb-8">
-                  <TaskList 
-                    tasks={tasks} 
-                    title="Team Tasks" 
-                    emptyMessage={emptyMessage}
-                    loading={tasksLoading}
-                    onTaskUpdate={loadTasks}
-                    teamMembers={teamMembers}
-                  />
-                </div>
               </div>
             </div>
-          </main>
-        } />
-        <Route 
-          path="/*" 
-          element={
             <TaskList 
               tasks={tasks} 
-              title={pageTitle} 
+              title="Team Tasks" 
               emptyMessage={emptyMessage}
               loading={tasksLoading}
               onTaskUpdate={loadTasks}
               teamMembers={teamMembers}
             />
+          </main>
+        } />
+        <Route 
+          path="/*" 
+          element={
+            <div>
+              <div className="container mx-auto px-6 pt-8">
+                <TaskFilterSortControls
+                  filters={filters}
+                  onFiltersChange={handleFiltersChange}
+                  teamMembers={teamMembers}
+                  showTeamFilter={false}
+                />
+              </div>
+              <TaskList 
+                tasks={tasks} 
+                title={pageTitle} 
+                emptyMessage={emptyMessage}
+                loading={tasksLoading}
+                onTaskUpdate={loadTasks}
+                teamMembers={teamMembers}
+              />
+            </div>
           } 
         />
       </Routes>
