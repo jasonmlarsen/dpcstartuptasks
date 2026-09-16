@@ -1,0 +1,20 @@
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Office / LibreOffice lock files
+~$*
+.~lock.*#
+
+# Node
+node_modules/
+dist/
+.env
+.env.local
+*.log
+
+# Editors
+.vscode/
+.idea/
