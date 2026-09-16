@@ -28,6 +28,18 @@
   --gray-800: #1f2937;
   --gray-900: #111827;
 
+  /* Chart categorical palette. Slots are assigned in fixed order and never
+     cycled — a series keeps its hue when other series come and go. Validated
+     against a white surface for colorblind separation (worst adjacent pair
+     ΔE 16.3 deutan) and chroma; --gray-400 used to hold slot 4 and failed the
+     chroma floor, reading as "no data" rather than as a category. Every chart
+     using these also carries direct labels, which is the required relief for
+     the two slots below 3:1 contrast with the surface. */
+  --chart-1: #2563eb;
+  --chart-2: #14b8a6;
+  --chart-3: #f97316;
+  --chart-4: #8b5cf6;
+
   /* Typography */
   --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   --font-mono: "SF Mono", Monaco, Inconsolata, "Roboto Mono", monospace;

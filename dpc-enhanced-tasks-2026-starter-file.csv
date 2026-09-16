@@ -1,0 +1,118 @@
+﻿task_id,depends_on,task_name,parent_task,phase,priority,tags,notes,helpful_links,state_specific,cost_estimate,recurring
+1,NULL,Business Name Brainstorm & Research,NULL,Phase 1: Foundation & Planning,Critical,"[""legal"", ""research"", ""decisions""]","Brainstorm names and research availability and trademark conflicts. Start at state level, then federal.",,No,$0 ,No
+2,NULL,Business Structure Decision,NULL,Phase 1: Foundation & Planning,Critical,"[""legal"", ""decisions""]","LLC vs PLLC vs PC. Most go with PLLC / LLC, eventually to be taxed as S-Corp once income is over $100k or so.",,Yes,$0 ,No
+3,2,Register Legal Business Name,Business Structure Decision,Phase 1: Foundation & Planning,Critical,"[""legal""]",File Articles of Organization/Incorporation with State. ,,Yes,$200-500,No
+4,3,"File Trade Name(s) / DBA (""Doing Business As"" names) if necessary",Register Legal Business Name,Phase 1: Foundation & Planning,Important,"[""legal""]",Doing Business As for patient-facing brand name,,Yes,$50-150,No
+5,3,Obtain EIN (Employer Identification Number),Register Legal Business Name,Phase 1: Foundation & Planning,Critical,"[""legal"", ""tax""]",Employer Identification Number from IRS (don't buy from third party),"[""https://www.irs.gov/businesses/small-businesses-self-employed/get-an-employer-identification-number""]",No,$0 ,No
+6,NULL,Membership Pricing Strategy / Break-Even Analysis,NULL,Phase 1: Foundation & Planning,Critical,"[""financial"", ""decisions"", ""research""]",Decide membership pricing structure. Hint: keep it simple.,"[""https://dpcpricing.directcaretools.com/""]",No,$0 ,No
+7,NULL,Location Selection Research,NULL,Phase 1: Foundation & Planning,Critical,"[""operations"", ""research"", ""decisions""]",Mobile vs. Fixed location. Tip: Street visibility isn't that important,"[""https://directcaretools.com/articles/location-selection/""]",No,$0 ,No
+8,NULL,Join DPC Alliance,NULL,Phase 1: Foundation & Planning,Nice to Have,"[""planning"", ""networking""]",A group of like-minded physicians with some great membership benefits.,"[""https://dpcalliance.org/""]",,,
+,,,,,,,,,,,
+9,NULL,State Medical License Verification,NULL,Phase 2: Credentialing & Compliance,Critical,"[""credentialing"", ""legal""]",Ensure your medical license is active and unrestricted in your practicing state,,Yes,$0 ,No
+10,9,DEA Registration,State Medical License Verification,Phase 2: Credentialing & Compliance,Critical,"[""credentialing"", ""legal""]",Self explanatory!,,No,$888 ,Triennial
+11,9,NPI Number Application / Update,State Medical License Verification,Phase 2: Credentialing & Compliance,Critical,"[""credentialing""]",Make sure your NPI number information is updated and active,,No,$0 ,No
+12,9,State Prescriber ID,State Medical License Verification,Phase 2: Credentialing & Compliance,Important,"[""credentialing""]",State-specific prescriber identifier (if applicable),,Yes,$0-50,No
+13,12,PDMP Registration,State Prescriber ID,Phase 2: Credentialing & Compliance,Important,"[""credentialing"", ""compliance""]",Prescription Drug Monitoring Program access,,Yes,$0 ,No
+14,NULL,Medicare Opt-Out Filing,NULL,Phase 2: Credentialing & Compliance,Critical,"[""credentialing"", ""legal"", ""compliance""]","If you choose to opt-out of Medicare, this is essential. ",,No,$0 ,Biennial
+15,9,Telemedicine Licenses,State Medical License Verification,Phase 2: Credentialing & Compliance,Nice to Have,"[""credentialing"", ""legal""]","If you'd like to care for patients in other states, you likely need an active license from that state.",,Yes,$300-500/state,Annual
+16,3,Obtain Business License,Register Legal Business Name,Phase 2: Credentialing & Compliance,Critical,"[""legal"", ""credentialing""]",City or county business operating license,,Yes,$50-400,Annual
+17,NULL,State DPC Law Compliance,NULL,Phase 2: Credentialing & Compliance,Critical,"[""legal"", ""compliance"", ""research""]",Review state-specific DPC regulations (don't just rely on AI summaries!),,Yes,$500-1500,No
+,,,,,,,,,,,
+18,5,Banking Setup,Obtain EIN (Employer Identification Number),Phase 3: Financial Infrastructure,Critical,"[""financial""]",Open business bank account,,No,$0 ,Monthly fee
+19,18,Business Credit Card,Banking Setup,Phase 3: Financial Infrastructure,Nice to Have,"[""financial""]",Separate business expenses build credit,,No,$0 ,No
+20,18,Bookkeeping: In-house or hire?,Banking Setup,Phase 3: Financial Infrastructure,Critical,"[""financial"", ""technology""]","We recommend hiring this out asap, unless you're familiar with bookkeeping.",,No,$300-600,Annual
+21,18,Payroll System Setup,Banking Setup,Phase 3: Financial Infrastructure,Important,"[""financial"", ""hr""]",Consider having bookkeeper do this. Not necessary if you're not hiring employees!,,No,$0-500,Monthly
+22,20,Accounting software,Bookkeeping: In-house or hire?,Phase 3: Financial Infrastructure,Important,"[""financial"", ""operations""]","If hiring bookkeeper, they'll have it. If not, use Xero or Quickbooks.",,No,$0 ,No
+23,6,Startup Funding Secured,Membership Pricing Strategy / Break-Even Analysis,Phase 3: Financial Infrastructure,Critical,"[""financial"", ""planning""]","Highly recommend bootstrapping, but if securing funds, do not use credit card debt to fund",,No,Varies,No
+24,9,Malpractice Insurance,State Medical License Verification,Phase 3: Financial Infrastructure,Critical,"[""insurance"", ""risk"", ""legal""]",Recommend going through DPC Alliance to find malpractice insurance,"[""https://dpcalliance.org/""]",No,$5000-15000,Annual
+25,3,General Liability Insurance,Register Legal Business Name,Phase 3: Financial Infrastructure,Critical,"[""insurance"", ""risk""]","General coverage (slip & fall, plus other general coverages)",,No,$500-2000,Annual
+26,3,Cyber Liability Insurance,Register Legal Business Name,Phase 3: Financial Infrastructure,Important,"[""insurance"", ""risk"", ""technology""]","Data breach coverage (ask what comes with malpractice, pair either w/ malpractice or general liability)",,No,$1000-3000,Annual
+,,,,,,,,,,,
+27,NULL,Domain Name,NULL,Phase 4: Technology,Critical,"[""technology"", ""marketing"", ""operations""]","This is ""yourdomainname.com"" and will be used for email, website, etc. - should only cost ~$12-30/year",,,,
+28,NULL,EMR System Selection,NULL,Phase 4: Technology,Critical,"[""technology"", ""research"", ""decisions""]","Major systems for DPC are Elation, Hint, AtlasMD, AkuteHealth, and others",,No,$3000-12000,Annual
+29,NULL,Membership Billing Software,NULL,Phase 4: Technology,Critical,"[""technology"", ""financial""]","For automated recurring billing, accepting payments in person, and more. Major systems are AtlasMD, Hint, Quickbooks, and others",,No,$1200-6000,Annual
+30,28,Telehealth Platform,EMR System Selection,Phase 4: Technology,Important,"[""technology"", ""clinical"", ""compliance""]",Will often pair with your EMR: check for HIPAA compliance if not,,No,$1000-3000,Annual
+31,NULL,Practice Email System,NULL,Phase 4: Technology,Critical,"[""technology"", ""operations""]","Professional and scalable email system. Major players are Microsoft, Google, Zoho, and many others.",,,,
+32,NULL,Phone System,NULL,Phase 4: Technology,Critical,"[""technology"", ""operations""]",Important to have a business line separate from cell phone. Many good options here.,,No,$500-2000,Annual
+33,31,Secure Messaging System,Practice Email System,Phase 4: Technology,Nice to Have,"[""technology"", ""compliance""]","Patient Communication: HIPAA compliant if possible, but have necessary forms for email / insecure messaging.",,No,$300-1200,Annual
+34,28,Electronic Fax Service,EMR System Selection,Phase 4: Technology,Important,"[""technology"", ""compliance""]",HIPAA-compliant faxing - often will come with EMR,,No,$200-500,Annual
+35,NULL,IT - hire or manage in-house?,NULL,Phase 4: Technology,Critical,"[""technology"", ""security""]","Decide if you are going to manage IT needs (computers, phone, storage, etc.) in-house or with a professional. Highly recommend eventually using a professional for security reasons.",,,,
+36,35,Data Backup System,IT - hire or manage in-house?,Phase 4: Technology,Critical,"[""technology"", ""compliance""]","If you store anything of importance on local computers, ensure you have automated backups.",,No,$500-1500,Annual
+37,35,IT Security Measures,IT - hire or manage in-house?,Phase 4: Technology,Critical,"[""technology"", ""compliance"", ""security""]","Understand how wifi, computer access, and much more is setup to ensure security.",,No,$1000-3000,No
+38,37,Password Manager,IT Security Measures,Phase 4: Technology,Important,"[""technology"", ""security""]","HIGHLY recommend using a password manager such as Dashlane, 1Password, or others.",,No,$50-200,Annual
+,,,,,,,,,,,
+39,NULL,Practice Website Development,NULL,Phase 5: Brand & Marketing,Important,"[""technology"", ""marketing""]",Made mostly for potential members - should mostly act as a 'salesman' that informs people about membership.,,No,$2000-8000,No
+40,39,Website Hosting,Practice Website Development,Phase 5: Brand & Marketing,Critical,"[""technology""]","Unless paired with website maintenance, shouldn't cost more than $25 monthly.",,No,$200-500,Annual
+41,39,Website Maintenance,Practice Website Development,Phase 5: Brand & Marketing,Important,"[""technology"", ""operations"", ""security""]","If you hire to have your site built, then ask about maintenance plans. If building yourself, update monthly or quarterly at least.",,,,
+42,39,SEO Setup,Practice Website Development,Phase 5: Brand & Marketing,Important,"[""marketing"", ""technology""]",Ensure your website includes all necessary SEO information for local search.,PUT LINK TO ARTICLE HERE!!!!,No,$500-2000,No
+43,39,Google Business Profile,Practice Website Development,Phase 5: Brand & Marketing,Important,"[""marketing"", ""technology""]","Start & claim your Google Business Profile after you know your location, have email & phone setup.",,No,$0 ,No
+44,3,Logo / Brand Development,Register Legal Business Name,Phase 5: Brand & Marketing,Important,"[""marketing"", ""brand""]","The cost for this is a huge range, especially with AI and other options on the internet. Logo, font, colors can always change. Invest only as much as you're comfortable - this is less important than most people think.",,No,$1500-5000,No
+45,44,Marketing Materials Design,Logo / Brand Development,Phase 5: Brand & Marketing,Important,"[""marketing"", ""brand""]","Order of importance: business card, flyers, banners, signage",,No,$500-2000,No
+46,44,Social Media Presence,Logo / Brand Development,Phase 5: Brand & Marketing,Important,"[""marketing""]",Only start and have profiles that you'll remain at least semi-active on.,,No,$0 ,No
+47,39,Content Marketing Plan,Practice Website Development,Phase 5: Brand & Marketing,Nice to Have,"[""marketing""]","Write for clarity - not for being cute or ""unique."" It's better to make things crystal clear for your potential patients.",,No,$0-1000,No
+48,NULL,Community Outreach Plan,NULL,Phase 5: Brand & Marketing,Important,"[""marketing""]","Consider ribbon cutting, chamber of commerce events, and more",,No,$0-500,No
+49,44,Press Release Preparation,Logo / Brand Development,Phase 5: Brand & Marketing,Nice to Have,"[""marketing""]",Prepare a piece for local media outlets - email out 2-6 weeks prior to opening,,No,$0-1000,No
+50,NULL,Email Marketing Setup,NULL,Phase 5: Brand & Marketing,Important,"[""marketing"", ""technology""]","Consider using a mass newsletter solution like Kit, MailChimp or similar rather than internal mailing",,No,$200-500,Annual
+51,NULL,Patient Education Materials,NULL,Phase 5: Brand & Marketing,Important,"[""patient"", ""experience"", ""clinical""]",DPC model explanation wellness resources,,No,$0-500,No
+,,,,,,,,,,,
+52,6,List of Services,Membership Pricing Strategy / Break-Even Analysis,Phase 6: Clinical Operations,Critical,"[""clinical"", ""operations"", ""decisions""]",Create a list of services that you do and do not provide and whether they are included in membership or not (tip: include as much as possible in membership to keep things simple).,,No,$0 ,No
+53,NULL,Formulary Development,NULL,Phase 6: Clinical Operations,Important,"[""clinical"", ""operations""]",Preferred medication list,,No,$0 ,No
+54,28,Medical Record Standards,EMR System Selection,Phase 6: Clinical Operations,Critical,"[""clinical"", ""compliance""]",Documentation requirements templates,,No,$0 ,No
+55,NULL,Prescription Policies,NULL,Phase 6: Clinical Operations,Important,"[""clinical"", ""compliance"", ""operations""]",Refill protocols controlled substances,,No,$0 ,No
+56,32,After-Hours Protocol,Phone System,Phase 6: Clinical Operations,Critical,"[""clinical"", ""operations""]",On-call coverage emergency response,,No,$0 ,No
+57,NULL,Emergency Procedures,NULL,Phase 6: Clinical Operations,Critical,"[""clinical"", ""compliance"", ""safety""]",Code response emergency equipment,,No,$0 ,No
+58,NULL,Specialist Network Development,NULL,Phase 6: Clinical Operations,Important,"[""clinical"", ""operations""]",Referral relationships for common needs,,No,$0 ,No
+59,NULL,Pharmacy Relationships,NULL,Phase 6: Clinical Operations,Important,"[""operations"", ""clinical""]",Preferred pharmacy discount programs,,No,$0 ,No
+60,NULL,Lab Services Provider,NULL,Phase 6: Clinical Operations,Critical,"[""clinical"", ""operations"", ""financial""]",In-office vs reference lab,,No,$0-500,Monthly
+61,NULL,Imaging Center Network,NULL,Phase 6: Clinical Operations,Important,"[""clinical"", ""operations""]",X-ray MRI CT ultrasound contacts,,No,$0 ,No
+62,NULL,DME Supplier Relationships,NULL,Phase 6: Clinical Operations,Nice to Have,"[""operations""]",Durable medical equipment sources,,No,$0 ,No
+63,NULL,Mental Health Contacts,NULL,Phase 6: Clinical Operations,Important,"[""clinical"", ""operations""]",Therapist psychiatrist network,,No,$0 ,No
+64,NULL,Home Health Coordination,NULL,Phase 6: Clinical Operations,Nice to Have,"[""operations"", ""clinical""]",Post-hospital care coordination,,No,$0 ,No
+,,,,,,,,,,,
+65,17,Patient Membership Agreement,State DPC Law Compliance,Phase 7: Patient Experience,Critical,"[""legal"", ""patient"", ""experience""]",Contract terms cancellation policy,,No,$500-2000,No
+66,65,Member Handbook Creation,Patient Membership Agreement,Phase 7: Patient Experience,Critical,"[""patient"", ""experience"", ""operations""]",Services hours communication policies,,No,$0 ,No
+67,28,Patient Forms Development,EMR System Selection,Phase 7: Patient Experience,Critical,"[""operations"", ""clinical"", ""compliance""]",Intake medical history consent forms,,No,$0 ,No
+68,67,New Patient Onboarding Flow,Patient Forms Development,Phase 7: Patient Experience,Critical,"[""operations"", ""patient"", ""experience""]",Enrollment welcome process orientation,,No,$0 ,No
+69,28,Patient Communication Preferences,EMR System Selection,Phase 7: Patient Experience,Important,"[""patient"", ""experience"", ""technology""]",Text email portal visit preferences,,No,$0 ,No
+70,28,Appointment Policies,EMR System Selection,Phase 7: Patient Experience,Critical,"[""operations"", ""patient"", ""experience""]",Scheduling same-day urgent visit policies,,No,$0 ,No
+71,70,Cancellation Policy,Appointment Policies,Phase 7: Patient Experience,Important,"[""operations"", ""patient"", ""experience""]",No-show late cancellation procedures,,No,$0 ,No
+72,NULL,Patient Feedback System,NULL,Phase 7: Patient Experience,Important,"[""patient"", ""experience"", ""quality"", ""operations""]",Satisfaction surveys improvement process,,No,$0-300,Annual
+,,,,,,,,,,,
+73,7,Office Location Lease,Location Selection Research,Phase 8: Physical Setup,Critical,"[""operations"", ""financial"", ""legal""]",Negotiate lease terms buildout allowance,,No,Varies,Monthly
+74,73,Office Design & Layout,Office Location Lease,Phase 8: Physical Setup,Critical,"[""operations""]",Exam rooms waiting area workflow,,No,$0-2000,No
+75,74,Office Buildout,Office Design & Layout,Phase 8: Physical Setup,Critical,"[""operations""]",Construction improvements finishes,,No,$5000-50000,No
+76,75,Medical Equipment Purchase,Office Buildout,Phase 8: Physical Setup,Critical,"[""clinical"", ""operations"", ""financial""]",Exam tables BP cuffs EKG etc,,No,$5000-20000,No
+77,75,Office Furniture,Office Buildout,Phase 8: Physical Setup,Important,"[""operations""]",Desks chairs waiting room,,No,$3000-10000,No
+78,75,Office Supplies,Office Buildout,Phase 8: Physical Setup,Important,"[""operations"", ""purchases""]","The basics: pens, paper clips, printers, etc.",,,,
+79,76,Medical Supplies & Inventory,Medical Equipment Purchase,Phase 8: Physical Setup,Critical,"[""clinical"", ""operations""]",Clinical supplies office supplies,,No,$2000-5000,No
+80,NULL,Point-of-Care Testing Setup,NULL,Phase 8: Physical Setup,Important,"[""clinical"", ""operations"", ""compliance""]",Urinalysis A1C strep flu etc (tip: make sure CLIA waivers include all tests you want: see Phase 10),,No,$1000-5000,No
+81,75,Signage Installation,Office Buildout,Phase 8: Physical Setup,Important,"[""marketing"", ""operations""]",Exterior building interior directional,,No,$1000-5000,No
+82,73,Utilities & Services Setup,Office Location Lease,Phase 8: Physical Setup,Critical,"[""operations""]",Electric water internet janitorial,,No,$0 ,Monthly
+,,,,,,,,,,,
+83,NULL,Staff Hiring Plan,NULL,Phase 9: Staffing & Training,Important,"[""hr"", ""operations"", ""planning""]",Job descriptions hiring timeline,,No,$0 ,No
+84,83,Employee Handbook,Staff Hiring Plan,Phase 9: Staffing & Training,Important,"[""hr"", ""legal""]",Policies benefits expectations,,No,$500-1500,No
+85,83,HR Compliance Setup,Employee Handbook,Phase 9: Staffing & Training,Important,"[""hr"", ""legal"", ""compliance""]",I-9 W-4 background checks,,No,$0 ,No
+86,NULL,Staff Training,NULL,Phase 9: Staffing & Training,Critical,"[""hr"", ""operations"", ""clinical""]",EMR phone systems clinical workflows,,No,$0 ,No
+87,21,Benefits Administration,Payroll System Setup,Phase 9: Staffing & Training,Important,"[""hr"", ""financial""]",Health insurance retirement if offered,,No,Varies,Monthly
+,,,,,,,,,,,
+88,NULL,Policies & Procedures Manual,NULL,Phase 10: Operational Readiness,Critical,"[""operations"", ""compliance""]","TIP: No need to have this manual prepared - just have a binder or file ready to go. When you hire your first hire, part of their job is to keep this policies and procedures manual up-to-date, so then you have everything ready to go for new hires!",,No,$0 ,No
+89,86,Mock Patient Visits,Staff Training,Phase 10: Operational Readiness,Critical,"[""operations"", ""clinical"", ""quality""]",Practice workflows troubleshoot issues,,No,$0 ,No
+90,89,Soft Launch Planning,Mock Patient Visits,Phase 10: Operational Readiness,Important,"[""operations"", ""marketing""]",Friends family limited enrollment,,No,$0 ,No
+91,75,Final Inspections,Office Buildout,Phase 10: Operational Readiness,Critical,"[""operations"", ""legal"", ""compliance""]",Fire safety health department,,Yes,$0-500,No
+92,NULL,Risk Management Review,NULL,Phase 10: Operational Readiness,Important,"[""risk"", ""compliance"", ""legal""]",Final compliance check,,No,$0-1000,No
+93,NULL,HIPAA Compliance Program / Training,NULL,Phase 10: Operational Readiness,Critical,"[""compliance"", ""legal""]","Understand how to remain HIPAA compliant, and if there's a breach, understand what needs to be done.",,No,$0-2000,No
+94,93,Business Associate Agreements,HIPAA Compliance Program / Training,Phase 10: Operational Readiness,Critical,"[""compliance"", ""legal""]",Make sure you have signed BAA's on file (vendors should have them available) for all who are handling PHI,,No,$0 ,No
+95,NULL,CLIA Waiver Application / Certificate,NULL,Phase 10: Operational Readiness,Important,"[""credentialing"", ""compliance""]",Certificate for point-of-care testing if applicable (usually from the state),,Yes,$150 ,Biennial
+96,NULL,Controlled Substance Protocols,NULL,Phase 10: Operational Readiness,Important,"[""compliance"", ""clinical""]","Policies for prescribing, monitoring, storage of scheduled prescriptions",,No,$0 ,No
+,,,,,,,,,,,
+97,NULL,Official Launch,NULL,Phase 11: Launch,Critical,"[""marketing"", ""operations""]",Open for business grand opening,,No,Varies,No
+98,97,Launch Event,Official Launch,Phase 11: Launch,Nice to Have,"[""marketing""]",Community celebration open house,,No,$500-5000,No
+99,49,Press Outreach,Press Release Preparation,Phase 11: Launch,Important,"[""marketing""]",Media announcements interviews,,No,$0 ,No
+,,,,,,,,,,,
+100,97,Week 1 Operations Review,Official Launch,Phase 12: Post-Launch,Critical,"[""operations"", ""quality""]",Daily huddles issue tracking,,No,$0 ,No
+101,100,First Month Review,Week 1 Operations Review,Phase 12: Post-Launch,Critical,"[""operations"", ""financial"", ""quality""]",Patient feedback workflow adjustments financials,,No,$0 ,No
+102,101,90-Day Strategic Review,First Month Review,Phase 12: Post-Launch,Critical,"[""operations"", ""financial"", ""marketing"", ""quality""]",Patient enrollment operational efficiency marketing ROI,,No,$0 ,No
+103,101,Financial Performance Review,First Month Review,Phase 12: Post-Launch,Critical,"[""financial"", ""operations""]",Actual vs projected adjust pricing if needed,,No,$0 ,Monthly
+104,101,Marketing Effectiveness Review,First Month Review,Phase 12: Post-Launch,Important,"[""marketing"", ""operations""]",Patient acquisition channels ROI,,No,$0 ,Monthly
+105,102,Patient Retention Analysis,90-Day Strategic Review,Phase 12: Post-Launch,Important,"[""operations"", ""quality"", ""patient"", ""experience""]",Churn rate satisfaction feedback,,No,$0 ,Quarterly
+106,102,Process Optimization,90-Day Strategic Review,Phase 12: Post-Launch,Important,"[""operations"", ""quality""]",Identify bottlenecks improve workflows,,No,$0 ,Ongoing

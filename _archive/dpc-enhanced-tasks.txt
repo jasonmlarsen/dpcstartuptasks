@@ -1,0 +1,138 @@
+task_id,task_name,phase,parent_task,priority,weeks_before_launch,estimated_hours,tags,resources,notes,depends_on,success_criteria,state_specific,cost_estimate,recurring
+1,Business Name Research,Phase 1A: Foundation & Planning,NULL,Critical,-20,3,legal research decisions,Attorney Business Advisor,Research availability and trademark conflicts,NULL,3 viable name options identified,No,$0,No
+2,Business Structure Decision,Phase 1A: Foundation & Planning,NULL,Critical,-20,8,legal decisions,Attorney CPA,LLC vs PLLC vs PC - tax and liability considerations,NULL,Entity type selected with written justification,Yes,$0,No
+3,Register Legal Business Name,Phase 1A: Foundation & Planning,Business Structure Decision,Critical,-19,4,legal,Attorney State Agency,File Articles of Organization/Incorporation,1 2,Certificate of formation received,Yes,$200-500,No
+4,File DBA if needed,Phase 1A: Foundation & Planning,Register Legal Business Name,Important,-19,2,legal,Attorney State Agency,Doing Business As for patient-facing brand name,3,DBA certificate received,Yes,$50-150,No
+5,Apply for EIN,Phase 1A: Foundation & Planning,Register Legal Business Name,Critical,-19,1,legal tax,IRS Website,Employer Identification Number from IRS,3,EIN confirmation letter received,No,$0,No
+6,Business Plan Development,Phase 1A: Foundation & Planning,NULL,Critical,-20,40,planning financial decisions,Business Advisor Mentor,Executive summary budget projections market analysis,NULL,Complete business plan approved by advisor,No,$0-2000,No
+7,Break-Even Analysis,Phase 1A: Foundation & Planning,Business Plan Development,Critical,-19,8,financial planning research,Accountant Business Advisor,Calculate patient volume needed for profitability,6,Break-even patient number determined,No,$0,No
+8,Membership Pricing Strategy,Phase 1A: Foundation & Planning,Break-Even Analysis,Critical,-18,12,financial decisions research,Accountant DPC Consultant,Monthly fees visit fees ancillary pricing,7,Pricing model documented and validated,No,$0,No
+9,Target Market Research,Phase 1A: Foundation & Planning,Business Plan Development,Important,-19,16,marketing research,Market Research Consultant,Demographics psychographics competitor analysis,6,Market analysis report completed,No,$500-2000,No
+10,Location Selection Research,Phase 1A: Foundation & Planning,Target Market Research,Critical,-18,20,operations research decisions,Real Estate Broker Demographics Data,Analyze traffic demographics lease rates,9,Top 3 locations identified with pros/cons,No,$0,No
+
+11,State Medical License Verification,Phase 1B: Credentialing & Compliance,NULL,Critical,-20,4,credentialing legal,State Medical Board,Ensure active unrestricted license in practice state,NULL,Current license verified and documented,Yes,$0,No
+12,DEA Registration,Phase 1B: Credentialing & Compliance,State Medical License Verification,Critical,-19,3,credentialing legal,DEA,Drug Enforcement Administration controlled substance license,11,DEA certificate received,No,$888,Triennial
+13,NPI Number Application,Phase 1B: Credentialing & Compliance,State Medical License Verification,Critical,-19,2,credentialing,NPPES,National Provider Identifier,11,NPI number received,No,$0,No
+14,State Prescriber ID,Phase 1B: Credentialing & Compliance,State Medical License Verification,Important,-19,2,credentialing,State Pharmacy Board,State-specific prescriber identifier,11,Prescriber ID received,Yes,$0-50,No
+15,PDMP Registration,Phase 1B: Credentialing & Compliance,State Prescriber ID,Important,-18,1,credentialing compliance,State PDMP,Prescription Drug Monitoring Program access,14,PDMP account active,Yes,$0,No
+16,Medicare Opt-Out Filing,Phase 1B: Credentialing & Compliance,NPI Number Application,Critical,-18,4,credentialing legal compliance,Medicare,Affidavit for private contracts with Medicare beneficiaries,13,Opt-out confirmation received,No,$0,Biennial
+17,CAQH Profile Setup,Phase 1B: Credentialing & Compliance,NPI Number Application,Nice to Have,-18,3,credentialing,CAQH,Credentialing even if not accepting insurance,13,CAQH profile complete and attested,No,$0,Quarterly
+18,Telemedicine Licenses,Phase 1B: Credentialing & Compliance,State Medical License Verification,Nice to Have,-17,8,credentialing legal,State Medical Boards,Additional state licenses for telehealth if applicable,11,Interstate licenses obtained if needed,Yes,$300-500/state,Annual
+
+19,HIPAA Compliance Program,Phase 1B: Credentialing & Compliance,NULL,Critical,-18,16,compliance legal,HIPAA Consultant Attorney,Privacy Security Breach Notification policies,NULL,HIPAA compliance manual completed,No,$500-2000,No
+20,Business Associate Agreements,Phase 1B: Credentialing & Compliance,HIPAA Compliance Program,Critical,-17,8,compliance legal,Attorney,BAAs with all vendors handling PHI,19,BAA templates created and executed,No,$0,No
+21,OSHA Compliance Plan,Phase 1B: Credentialing & Compliance,NULL,Important,-17,8,compliance safety,OSHA Consultant,Bloodborne pathogens hazard communication,NULL,OSHA compliance manual completed,No,$200-800,No
+22,CLIA Waiver Application,Phase 1B: Credentialing & Compliance,NULL,Important,-17,4,credentialing compliance,CMS State Agency,Certificate for point-of-care testing if applicable,NULL,CLIA certificate received if needed,Yes,$150,Biennial
+23,Obtain Business License,Phase 1B: Credentialing & Compliance,Register Legal Business Name,Critical,-18,3,legal credentialing,Local Government,City or county business operating license,3,Business license certificate received,Yes,$50-400,Annual
+24,State DPC Law Compliance,Phase 1B: Credentialing & Compliance,NULL,Critical,-18,8,legal compliance research,Attorney,Review state-specific DPC regulations,NULL,Compliance checklist completed,Yes,$500-1500,No
+25,Controlled Substance Protocols,Phase 1B: Credentialing & Compliance,DEA Registration,Important,-17,6,compliance clinical,Medical Director,Policies for prescribing monitoring storage,12,Controlled substance policy documented,No,$0,No
+
+26,Banking & Payment Setup,Phase 2: Financial Infrastructure,Apply for EIN,Critical,-16,4,financial,Bank,Open business bank account,5,Business checking account opened,No,$0,Monthly fee
+27,Business Credit Card,Phase 2: Financial Infrastructure,Banking & Payment Setup,Nice to Have,-16,2,financial,Bank,Separate business expenses build credit,26,Business credit card received,No,$0,No
+28,Accounting Software Setup,Phase 2: Financial Infrastructure,Banking & Payment Setup,Critical,-16,8,financial technology,Accountant Software Vendor,QuickBooks Xero or similar,26,Accounting software configured and connected,No,$300-600,Annual
+29,Payroll System Setup,Phase 2: Financial Infrastructure,Apply for EIN,Important,-15,4,financial hr,Payroll Provider,Only if hiring employees,5,Payroll system configured if needed,No,$0-500,Monthly
+30,Bookkeeping Processes,Phase 2: Financial Infrastructure,Accounting Software Setup,Important,-15,6,financial operations,Accountant,Monthly reconciliation expense tracking,28,Bookkeeping procedures documented,No,$0,No
+31,Tax Planning Strategy,Phase 2: Financial Infrastructure,Business Structure Decision,Critical,-16,8,financial tax,CPA,Quarterly estimates deductions retirement,2,Tax strategy document completed,No,$500-1500,No
+32,Startup Funding Secured,Phase 2: Financial Infrastructure,Break-Even Analysis,Critical,-17,40,financial planning,Bank SBA Investors,Loans savings grants,7,Sufficient funding secured for 12 months,No,Varies,No
+33,Malpractice Insurance,Phase 2: Financial Infrastructure,State Medical License Verification,Critical,-15,8,insurance risk legal,Insurance Broker,Occurrence or claims-made policy,11,Malpractice policy in force,No,$5000-15000,Annual
+34,General Liability Insurance,Phase 2: Financial Infrastructure,Register Legal Business Name,Critical,-15,4,insurance risk,Insurance Broker,Slip and fall property damage,3,GL policy in force,No,$500-2000,Annual
+35,Cyber Liability Insurance,Phase 2: Financial Infrastructure,HIPAA Compliance Program,Important,-15,4,insurance risk technology,Insurance Broker,Data breach coverage,19,Cyber policy in force,No,$1000-3000,Annual
+36,Workers Comp Insurance,Phase 2: Financial Infrastructure,Payroll System Setup,Important,-14,3,insurance risk hr,Insurance Broker,Required if you have employees,29,Workers comp policy in force if needed,Yes,$0-2000,Annual
+37,Business Overhead Insurance,Phase 2: Financial Infrastructure,NULL,Nice to Have,-14,3,insurance risk,Insurance Broker,Disability insurance for practice expenses,NULL,BOE policy in force if desired,No,$2000-5000,Annual
+
+38,EMR System Selection,Phase 3A: Technology Core Systems,NULL,Critical,-14,20,technology research decisions,IT Consultant EMR Vendors,Compare features pricing HIPAA compliance,NULL,EMR vendor selected with contract,No,$3000-12000,Annual
+39,EMR Implementation,Phase 3A: Technology Core Systems,EMR System Selection,Critical,-12,40,technology,EMR Vendor IT Consultant,Configuration templates workflows testing,38,EMR live and staff trained,No,Included,No
+40,Membership Billing Software,Phase 3A: Technology Core Systems,NULL,Critical,-13,16,technology financial,Software Vendors,Automated recurring billing patient portal,NULL,Billing software selected and contracted,No,$1200-6000,Annual
+41,Billing Software Setup,Phase 3A: Technology Core Systems,Membership Billing Software,Critical,-11,20,technology financial,Software Vendor,Configuration testing integration with bank,40,Billing system live and tested,No,Included,No
+42,Practice Management System,Phase 3A: Technology Core Systems,EMR System Selection,Important,-12,12,technology operations,Software Vendor,Scheduling registration if separate from EMR,38,PM system configured,No,$1000-5000,Annual
+43,Patient Portal Setup,Phase 3A: Technology Core Systems,EMR Implementation,Important,-10,8,technology patient experience,EMR Vendor,Online access messaging appointment booking,39,Patient portal active and tested,No,Included,No
+44,Telehealth Platform,Phase 3A: Technology Core Systems,HIPAA Compliance Program,Important,-12,12,technology clinical compliance,Telehealth Vendor,HIPAA-compliant video visits,19,Telehealth platform configured and tested,No,$1000-3000,Annual
+45,Phone System,Phase 3A: Technology Core Systems,NULL,Critical,-11,8,technology operations,Phone/VoIP Vendor,Business line voicemail on-call forwarding,NULL,Phone system installed and tested,No,$500-2000,Annual
+46,Secure Messaging System,Phase 3A: Technology Core Systems,HIPAA Compliance Program,Important,-11,6,technology compliance,Secure Messaging Vendor,HIPAA-compliant patient communication,19,Secure messaging configured,No,$300-1200,Annual
+47,Electronic Fax Service,Phase 3A: Technology Core Systems,HIPAA Compliance Program,Important,-11,4,technology compliance,eFax Vendor,HIPAA-compliant faxing,19,eFax service active,No,$200-500,Annual
+
+48,Practice Website Development,Phase 3B: Technology Infrastructure,NULL,Critical,-13,40,technology marketing,Web Developer Designer,Patient-facing site with membership info,NULL,Website live and mobile-responsive,No,$2000-8000,No
+49,Website Hosting & Domain,Phase 3B: Technology Infrastructure,Practice Website Development,Critical,-12,4,technology,Hosting Provider,Secure hosting SSL certificate,48,Website hosted with SSL,No,$200-500,Annual
+50,SEO Setup,Phase 3B: Technology Infrastructure,Practice Website Development,Important,-10,12,marketing technology,SEO Consultant,Search engine optimization local listings,48,SEO baseline established,No,$500-2000,No
+51,Google Business Profile,Phase 3B: Technology Infrastructure,Practice Website Development,Important,-11,3,marketing technology,Google,Local search presence,48,Google Business Profile claimed and optimized,No,$0,No
+52,Practice Email System,Phase 3B: Technology Infrastructure,HIPAA Compliance Program,Critical,-12,6,technology operations,Email Provider,Professional email encrypted if needed,19,Email system configured,No,$100-300,Annual
+53,Data Backup System,Phase 3B: Technology Infrastructure,EMR Implementation,Critical,-10,8,technology compliance,Backup Vendor IT Consultant,Automated HIPAA-compliant backups,39,Backup system active and tested,No,$500-1500,Annual
+54,IT Security Measures,Phase 3B: Technology Infrastructure,HIPAA Compliance Program,Critical,-11,12,technology compliance security,IT Security Consultant,Firewall antivirus encryption access controls,19,Security measures implemented and documented,No,$1000-3000,No
+55,Password Manager,Phase 3B: Technology Infrastructure,IT Security Measures,Important,-10,2,technology security,Password Manager Vendor,Secure credential storage,54,Password manager deployed,No,$50-200,Annual
+
+56,Brand Development,Phase 4: Brand & Marketing,Business Name Research,Important,-12,24,marketing brand,Designer Brand Consultant,Logo colors fonts voice,1,Brand guide completed,No,$1500-5000,No
+57,Marketing Materials Design,Phase 4: Brand & Marketing,Brand Development,Important,-10,20,marketing brand,Designer,Brochures business cards signage,56,Marketing materials printed,No,$500-2000,No
+58,Social Media Presence,Phase 4: Brand & Marketing,Brand Development,Important,-10,12,marketing,Marketing Consultant,Facebook Instagram LinkedIn profiles,56,Social media accounts created and branded,No,$0,No
+59,Content Marketing Plan,Phase 4: Brand & Marketing,Practice Website Development,Important,-9,16,marketing,Marketing Consultant,Blog posts patient education videos,48,Content calendar created,No,$0-1000,No
+60,Referral Program Design,Phase 4: Brand & Marketing,Membership Pricing Strategy,Nice to Have,-8,8,marketing operations,Marketing Consultant,Member incentives for referrals,8,Referral program documented,No,$0,No
+61,Community Outreach Plan,Phase 4: Brand & Marketing,Target Market Research,Important,-9,12,marketing,Marketing Consultant,Local events partnerships networking,9,Outreach strategy documented,No,$0-500,No
+62,Press Release Preparation,Phase 4: Brand & Marketing,Brand Development,Nice to Have,-6,8,marketing,PR Consultant,Launch announcement media contacts,56,Press materials prepared,No,$0-1000,No
+63,Email Marketing Setup,Phase 4: Brand & Marketing,Practice Email System,Important,-8,6,marketing technology,Email Marketing Platform,Newsletter automation signup forms,52,Email marketing platform configured,No,$200-500,Annual
+64,Patient Education Materials,Phase 4: Brand & Marketing,NULL,Important,-8,16,patient experience clinical,Medical Writer,DPC model explanation wellness resources,NULL,Education packet completed,No,$0-500,No
+
+65,Service Structure Definition,Phase 5A: Clinical Operations Setup,Membership Pricing Strategy,Critical,-10,12,clinical operations decisions,Medical Consultant,Included services scope of practice,8,Service list documented,No,$0,No
+66,Clinical Protocols Development,Phase 5A: Clinical Operations Setup,NULL,Critical,-10,32,clinical compliance,Medical Director Consultant,Guidelines for common conditions,NULL,Clinical protocol manual completed,No,$0-1500,No
+67,Formulary Development,Phase 5A: Clinical Operations Setup,NULL,Important,-9,16,clinical operations,Pharmacist Medical Consultant,Preferred medication list,NULL,Formulary documented,No,$0,No
+68,Standing Orders Creation,Phase 5A: Clinical Operations Setup,Clinical Protocols Development,Important,-8,12,clinical compliance,Medical Director,Labs immunizations chronic disease management,66,Standing orders approved and documented,No,$0,No
+69,Medical Record Standards,Phase 5A: Clinical Operations Setup,EMR Implementation,Critical,-9,12,clinical compliance,Medical Director,Documentation requirements templates,39,Documentation standards manual completed,No,$0,No
+70,Prescription Policies,Phase 5A: Clinical Operations Setup,DEA Registration,Important,-8,8,clinical compliance operations,Medical Director,Refill protocols controlled substances,12,Prescription policies documented,No,$0,No
+71,After-Hours Protocol,Phase 5A: Clinical Operations Setup,Phone System,Critical,-8,8,clinical operations,Medical Director,On-call coverage emergency response,45,After-hours policy documented and tested,No,$0,No
+72,Emergency Procedures,Phase 5A: Clinical Operations Setup,NULL,Critical,-8,12,clinical compliance safety,Medical Director OSHA Consultant,Code response emergency equipment,NULL,Emergency protocol documented,No,$0,No
+73,Quality Metrics Plan,Phase 5A: Clinical Operations Setup,NULL,Important,-8,12,clinical operations quality,Medical Director,Clinical outcomes patient satisfaction KPIs,NULL,Quality measurement plan documented,No,$0,No
+
+74,Specialist Network Development,Phase 5B: Clinical Operations Networks,NULL,Important,-9,20,clinical operations,Medical Director,Referral relationships for common needs,NULL,Specialist list with contact info,No,$0,No
+75,Pharmacy Relationships,Phase 5B: Clinical Operations Networks,Formulary Development,Important,-8,12,operations clinical,Pharmacist,Preferred pharmacy discount programs,67,Pharmacy partnership agreements,No,$0,No
+76,Lab Services Contract,Phase 5B: Clinical Operations Networks,NULL,Critical,-9,12,clinical operations financial,Lab Vendor,In-office vs reference lab,NULL,Lab contract executed with pricing,No,$0-500,Monthly
+77,Imaging Center Network,Phase 5B: Clinical Operations Networks,Specialist Network Development,Important,-8,8,clinical operations,Medical Director,X-ray MRI CT ultrasound contacts,74,Imaging center list with pricing,No,$0,No
+78,DME Supplier Relationships,Phase 5B: Clinical Operations Networks,NULL,Nice to Have,-7,6,operations,DME Vendors,Durable medical equipment sources,NULL,DME supplier list,No,$0,No
+79,Mental Health Referrals,Phase 5B: Clinical Operations Networks,Specialist Network Development,Important,-7,8,clinical operations,Mental Health Providers,Therapist psychiatrist network,74,Mental health referral list,No,$0,No
+80,Home Health Coordination,Phase 5B: Clinical Operations Networks,NULL,Nice to Have,-7,6,operations clinical,Home Health Agencies,Post-hospital care coordination,NULL,Home health contacts established,No,$0,No
+
+81,Patient Membership Agreement,Phase 5C: Patient Experience,State DPC Law Compliance,Critical,-10,16,legal patient experience,Attorney,Contract terms cancellation policy,24,Agreement template finalized and approved,No,$500-2000,No
+82,Member Handbook Creation,Phase 5C: Patient Experience,Patient Membership Agreement,Critical,-9,24,patient experience operations,Medical Director,Services hours communication policies,81,Member handbook completed,No,$0,No
+83,Patient Forms Development,Phase 5C: Patient Experience,EMR Implementation,Critical,-8,16,operations clinical compliance,Medical Director,Intake medical history consent forms,39,All patient forms finalized,No,$0,No
+84,New Patient Onboarding Flow,Phase 5C: Patient Experience,Patient Forms Development,Critical,-7,12,operations patient experience,Operations Manager,Enrollment welcome process orientation,83,Onboarding checklist documented,No,$0,No
+85,Patient Communication Preferences,Phase 5C: Patient Experience,Patient Portal Setup,Important,-7,6,patient experience technology,Operations Manager,Text email portal visit preferences,43,Communication preference system configured,No,$0,No
+86,Appointment Policies,Phase 5C: Patient Experience,Practice Management System,Critical,-8,8,operations patient experience,Operations Manager,Scheduling same-day urgent visit policies,42,Appointment policy documented,No,$0,No
+87,Cancellation Policy,Phase 5C: Patient Experience,Appointment Policies,Important,-7,4,operations patient experience,Operations Manager,No-show late cancellation procedures,86,Cancellation policy documented,No,$0,No
+88,Patient Feedback System,Phase 5C: Patient Experience,NULL,Important,-6,8,patient experience quality operations,Operations Manager,Satisfaction surveys improvement process,NULL,Feedback collection system established,No,$0-300,Annual
+
+89,Office Location Lease,Phase 6A: Physical Setup,Location Selection Research,Critical,-8,40,operations financial legal,Real Estate Broker Attorney,Negotiate lease terms buildout allowance,10,Lease signed,No,Varies,Monthly
+90,Office Design & Layout,Phase 6A: Physical Setup,Office Location Lease,Critical,-6,24,operations,Designer Contractor,Exam rooms waiting area workflow,89,Floor plan approved,No,$0-2000,No
+91,Office Buildout,Phase 6A: Physical Setup,Office Design & Layout,Critical,-5,80,operations,Contractor,Construction improvements finishes,90,Buildout completed and inspected,No,$5000-50000,No
+92,Medical Equipment Purchase,Phase 6A: Physical Setup,Office Buildout,Critical,-4,16,clinical operations financial,Medical Equipment Vendor,Exam tables BP cuffs EKG etc,91,Equipment purchased and delivered,No,$5000-20000,No
+93,Office Furniture,Phase 6A: Physical Setup,Office Buildout,Important,-4,12,operations,Office Furniture Vendor,Desks chairs waiting room,91,Furniture delivered and assembled,No,$3000-10000,No
+94,Supplies & Inventory,Phase 6A: Physical Setup,Medical Equipment Purchase,Critical,-3,12,clinical operations,Medical Supply Vendor,Clinical supplies office supplies,92,Initial inventory stocked,No,$2000-5000,No
+95,Point-of-Care Testing Setup,Phase 6A: Physical Setup,CLIA Waiver Application,Important,-3,8,clinical operations compliance,Lab Equipment Vendor,Urinalysis A1C strep flu etc,22,POC testing equipment installed and validated,No,$1000-5000,No
+96,Signage Installation,Phase 6A: Physical Setup,Office Buildout,Important,-3,8,marketing operations,Sign Company,Exterior building interior directional,91,Signage installed,No,$1000-5000,No
+97,Utilities & Services Setup,Phase 6A: Physical Setup,Office Location Lease,Critical,-5,8,operations,Utility Companies,Electric water internet janitorial,89,All utilities active,No,$0,Monthly
+
+98,Staff Hiring Plan,Phase 6B: Staffing & Training,NULL,Important,-10,12,hr operations planning,HR Consultant,Job descriptions hiring timeline,NULL,Hiring plan documented,No,$0,No
+99,Office Manager Hire,Phase 6B: Staffing & Training,Staff Hiring Plan,Important,-8,40,hr,Recruiter,Interviews background check onboarding,98,Office manager hired,No,$0,No
+100,Medical Assistant Hire,Phase 6B: Staffing & Training,Staff Hiring Plan,Important,-7,32,hr clinical,Recruiter,If needed based on model,98,MA hired if needed,No,$0,No
+101,Front Desk Staff Hire,Phase 6B: Staffing & Training,Staff Hiring Plan,Nice to Have,-6,24,hr operations,Recruiter,Based on patient volume,98,Front desk hired if needed,No,$0,No
+102,Employee Handbook,Phase 6B: Staffing & Training,Staff Hiring Plan,Important,-8,16,hr legal,HR Consultant Attorney,Policies benefits expectations,98,Employee handbook completed,No,$500-1500,No
+103,HR Compliance Setup,Phase 6B: Staffing & Training,Employee Handbook,Important,-7,12,hr legal compliance,HR Consultant,I-9 W-4 background checks,102,HR compliance checklist completed,No,$0,No
+104,Staff Training Program,Phase 6B: Staffing & Training,Office Manager Hire,Critical,-4,40,hr operations clinical,Operations Manager,EMR phone systems clinical workflows,99,Staff training completed and documented,No,$0,No
+105,Benefits Administration,Phase 6B: Staffing & Training,Payroll System Setup,Important,-6,8,hr financial,Benefits Broker,Health insurance retirement if offered,29,Benefits enrolled if applicable,No,Varies,Monthly
+
+106,Policies & Procedures Manual,Phase 6C: Operational Readiness,NULL,Critical,-6,40,operations compliance,Operations Manager,Clinical administrative financial policies,NULL,P&P manual completed,No,$0,No
+107,Compliance Training,Phase 6C: Operational Readiness,HIPAA Compliance Program,Critical,-4,12,compliance hr,Compliance Officer,HIPAA OSHA safety for all staff,19,Compliance training completed and documented,No,$0,Annual
+108,Mock Patient Visits,Phase 6C: Operational Readiness,Staff Training Program,Critical,-3,16,operations clinical quality,Operations Manager,Practice workflows troubleshoot issues,104,Mock visits completed with feedback,No,$0,No
+109,Soft Launch Planning,Phase 6C: Operational Readiness,Mock Patient Visits,Important,-2,12,operations marketing,Operations Manager,Friends family limited enrollment,108,Soft launch plan documented,No,$0,No
+110,Final Inspections,Phase 6C: Operational Readiness,Office Buildout,Critical,-2,8,operations legal compliance,Inspectors,Fire safety health department,91,All inspections passed,Yes,$0-500,No
+111,Risk Management Review,Phase 6C: Operational Readiness,Policies & Procedures Manual,Important,-2,8,risk compliance legal,Risk Manager Attorney,Final compliance check,106,Risk assessment completed,No,$0-1000,No
+112,Cash Flow Projection Finalized,Phase 6C: Operational Readiness,Startup Funding Secured,Critical,-2,12,financial planning,Accountant,First 12 months monthly projections,32,Cash flow model finalized,No,$0,No
+
+113,Official Launch,Phase 7: Launch,NULL,Critical,0,8,marketing operations,All Team,Open for business grand opening,109 110,Practice officially open,No,Varies,No
+114,Launch Event,Phase 7: Launch,Official Launch,Nice to Have,0,16,marketing,Event Planner,Community celebration open house,113,Launch event executed if planned,No,$500-5000,No
+115,Press Outreach,Phase 7: Launch,Press Release Preparation,Important,0,8,marketing,PR Consultant,Media announcements interviews,62 113,Press coverage secured if possible,No,$0,No
+
+116,Week 1 Operations Review,Phase 8: Post-Launch,Official Launch,Critical,1,4,operations quality,Operations Manager,Daily huddles issue tracking,113,Week 1 review completed,No,$0,No
+117,First Month Review,Phase 8: Post-Launch,Week 1 Operations Review,Critical,4,8,operations financial quality,Leadership Team,Patient feedback workflow adjustments financials,116,30-day review meeting held,No,$0,No
+118,90-Day Strategic Review,Phase 8: Post-Launch,First Month Review,Critical,12,12,operations financial marketing quality,Leadership Team Advisor,Patient enrollment operational efficiency marketing ROI,117,90-day strategic plan updated,No,$0,No
+119,Quality Metrics Review,Phase 8: Post-Launch,Quality Metrics Plan,Important,8,6,quality clinical operations,Medical Director,Clinical outcomes patient satisfaction,73 117,Quality dashboard reviewed,No,$0,Quarterly
+120,Financial Performance Review,Phase 8: Post-Launch,First Month Review,Critical,8,8,financial operations,Accountant Leadership,Actual vs projected adjust pricing if needed,117,Financial review completed,No,$0,Monthly
+121,Marketing Effectiveness Review,Phase 8: Post-Launch,First Month Review,Important,8,8,marketing operations,Marketing Consultant,Patient acquisition channels ROI,117,Marketing metrics analyzed,No,$0,Monthly
+122,Patient Retention Analysis,Phase 8: Post-Launch,First Month Review,Important,12,6,operations quality patient experience,Operations Manager,Churn rate satisfaction feedback,117,Retention report completed,No,$0,Quarterly
+123,Process Optimization,Phase 8: Post-Launch,90-Day Strategic Review,Important,13,12,operations quality,Operations Manager,Identify bottlenecks improve workflows,118,Process improvements implemented,No,$0,Ongoing

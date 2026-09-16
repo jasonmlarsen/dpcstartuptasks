@@ -1,0 +1,73 @@
+﻿task_name,phase,parent_task,priority,weeks_before_launch,estimated_hours,tags,resources,notes
+Business Name Research,Phase 1: Business Foundation,,,,,,,
+Business Structure,Phase 1: Business Foundation,,Critical,-20,2,legal,,PLLC; LLC; S-Corp; or Corp - PLLC typically best for medical practices
+Register Legal Business Name,Phase 1: Business Foundation,,Critical,-19,1,legal,,Name you'll file with Secretary of State to create business
+Register Practice Name (DBA or Casual Biz Name),Phase 1: Business Foundation,,Important,-19,1,legal,,Marketing name - can remove PLLC/LLC from legal name or choose another name altogether. Register with appropriate entity (usually Dept. of Revenue)
+Trademark Search,Phase 1: Business Foundation,Business Name Research,Important,-20,3,legal research,,Search before finalizing names to avoid infringement
+Obtain EIN from IRS,Phase 1: Business Foundation,,Critical,-18,1,legal operations finance,IRS website (free) - https://www.irs.gov/businesses/small-businesses-self-employed/get-an-employer-identification-number,Required for banking and taxes - DO NOT pay for this service
+Create Operating Agreement,Phase 1: Business Foundation,,Important,-17,4,legal,Attorney review recommended,Essential for multi-owner practices; good practice for solo
+Business Registration & Licensing,Phase 1: Business Foundation,,Critical,-16,4,legal,City/County licensing office,Required permits and registrations
+Obtain Business License,Phase 1: Business Foundation,Business Registration & Licensing,Critical,-16,2,legal,Local city/county office,License to operate business in your jurisdiction
+File Trade Names (DBA),Phase 1: Business Foundation,Business Registration & Licensing,Important,-16,1,legal,Same office as business license,If practice name differs from legal business name
+Medicare Opt-Out Decision,Phase 1: Business Foundation,,Critical,-15,2,legal decisions,CMS Medicare opt-out forms,Critical decision affecting patient demographics and billing
+Banking & Payment Setup,Phase 2: Financial Infrastructure,,Critical,-14,4,operations finance,Business banking relationships,Core financial infrastructure
+Open Business Bank Account,Phase 2: Financial Infrastructure,Banking & Payment Setup,Critical,-14,2,operations finance,Local bank or credit union,Requires EIN and business documents
+Business Credit Card,Phase 2: Financial Infrastructure,Banking & Payment Setup,Nice to Have,-13,1,finance,Rewards cards beneficial,Take advantage of startup spending for rewards
+Choose Bookkeeping Solution,Phase 2: Financial Infrastructure,Banking & Payment Setup,Critical,-13,3,decisions research vendors,QuickBooks; bookkeeper; or CPA,In-house initially OK; plan to outsource as you grow
+Select Accounting Service,Phase 2: Financial Infrastructure,Banking & Payment Setup,Critical,-13,2,decisions research vendors,Local CPA familiar with medical practices,Business taxes are complex - recommend professional help
+Payroll System Setup (only if you have employees),Phase 2: Financial Infrastructure,Banking & Payment Setup,Nice to Have,-8,2,decisions research vendors,Gusto.com recommended,Can be handled by bookkeeper initially
+Insurance & Risk Management,Phase 2: Financial Infrastructure,,Critical,-12,6,legal insurance,Insurance broker consultation,Comprehensive protection for practice
+Malpractice Insurance,Phase 2: Financial Infrastructure,Insurance & Risk Management,Critical,-12,3,legal insurance,DPC Alliance for potential discounts,Essential coverage for all physicians
+General Liability Insurance,Phase 2: Financial Infrastructure,Insurance & Risk Management,Critical,-11,2,legal insurance,Business insurance broker,Covers accidents; property damage - separate from malpractice
+Cyber Insurance,Phase 2: Financial Infrastructure,Insurance & Risk Management,Important,-11,1,insurance,Often bundled with other policies,Critical for protecting patient data
+Core Software Selection,Phase 3: Technology Infrastructure,,Critical,-12,20,technology research,DPC-specific EMR vendors,Choose integrated systems to avoid data silos
+EMR System,Phase 3: Technology Infrastructure,Core Software Selection,Critical,-12,8,technology research,AtlasMD; Hint Health; SimplePractice,Core clinical documentation system
+Membership Management,Phase 3: Technology Infrastructure,Core Software Selection,Critical,-11,4,technology research,Often integrated with EMR,Patient enrollment and membership tracking
+Billing Software,Phase 3: Technology Infrastructure,Core Software Selection,Important,-11,3,technology research,May be integrated with EMR,Automated membership billing and payments
+Scheduling System (often inside of EMR),Phase 3: Technology Infrastructure,Core Software Selection,Critical,-10,3,technology research,Patient self-scheduling preferred,Online booking reduces administrative burden
+Patient Communication,Phase 3: Technology Infrastructure,Core Software Selection,Important,-10,2,technology research,SMS; email; patient portal,Efficient communication reduces phone calls
+Telemedicine Platform (can be inside EMR),Phase 3: Technology Infrastructure,Core Software Selection,Critical,-9,3,technology research,HIPAA-compliant video conferencing,Essential for modern DPC practice
+Business Technology Setup,Phase 3: Technology Infrastructure,,Critical,-8,12,technology operations,IT consultant or tech-savvy staff,Physical infrastructure for operations
+Computer Systems,Phase 3: Technology Infrastructure,Business Technology Setup,Critical,-8,4,technology,Business-grade computers,Reliable systems for clinical and administrative work
+Internet & Phone System,Phase 3: Technology Infrastructure,Business Technology Setup,Critical,-7,3,technology,Business internet; VoIP phone system,Reliable connectivity essential for telemedicine
+Printer & Scanner,Phase 3: Technology Infrastructure,Business Technology Setup,Important,-7,1,technology,Multifunction printer recommended,For forms; records; and general business needs
+Backup & Security Systems,Phase 3: Technology Infrastructure,Business Technology Setup,Critical,-6,4,technology,Cloud backup; antivirus; firewall,Protect patient data and business continuity
+Email & Communication Setup,Phase 3: Technology Infrastructure,Business Technology Setup,Critical,-6,2,operations technology,Microsoft 365 or Google Workspace,Professional email with your domain
+Brand Development,Phase 4: Brand & Marketing,,Important,-10,8,marketing brand,Graphic designer or DIY tools,Visual identity for your practice
+Logo Design,Phase 4: Brand & Marketing,Brand Development,Important,-10,3,marketing brand,Canva; 99designs; or local designer,Simple; professional design - can evolve over time
+Brand Assets,Phase 4: Brand & Marketing,Brand Development,Nice to Have,-9,2,marketing brand,Colors; fonts; style guide,Consistent visual elements for marketing materials
+Professional Photography,Phase 4: Brand & Marketing,Brand Development,Nice to Have,-8,2,marketing brand,Professional or high-quality smartphone photos,For website; social media; and marketing
+Business Cards,Phase 4: Brand & Marketing,Brand Development,Nice to Have,-7,1,marketing,Local printer or online service,Essential networking tool with at minimum phone number
+Online Presence,Phase 4: Brand & Marketing,,Critical,-8,12,marketing operations,Web developer or website builder,Professional online presence for credibility
+Domain Name Purchase,Phase 4: Brand & Marketing,Online Presence,Critical,-8,1,marketing brand operations,Porkbun; Namecheap; GoDaddy,Try for .com; consider adding city name if needed
+Website Development,Phase 4: Brand & Marketing,Online Presence,Critical,-7,8,marketing,Local SEO important for DPC,Professional site shouldn't exceed $4k
+Google Business Profile,Phase 4: Brand & Marketing,Online Presence,Critical,-6,2,marketing,Free Google service,Essential for local search visibility
+Social Media Setup,Phase 4: Brand & Marketing,Online Presence,Nice to Have,-5,2,marketing brand,Only platforms you'll actively use,Reserve usernames even if not immediately active
+Service Structure & Pricing,Phase 5: Clinical Operations,,Critical,-8,12,decisions research,DPC consultant or mentor guidance,Core business model decisions
+Membership Pricing Strategy,Phase 5: Clinical Operations,Service Structure & Pricing,Critical,-8,4,decisions,Starting point: $85 individual; $150 couple; $225 family,Align with employer group plan structures
+Per-Visit Fee Structure,Phase 5: Clinical Operations,Service Structure & Pricing,Important,-7,2,decisions,Different rates for members vs non-members,Encourage membership while serving walk-ins
+Membership Capacity Planning,Phase 5: Clinical Operations,Service Structure & Pricing,Critical,-7,3,decisions research,Typically 300-600 patients per physician,Balance access with quality care
+Additional Services Menu,Phase 5: Clinical Operations,Service Structure & Pricing,Important,-6,3,decisions,Minor procedures; aesthetic services,Additional revenue streams
+Registration & Billing Policies,Phase 5: Clinical Operations,Service Structure & Pricing,Critical,-6,2,decisions,Registration fee OR minimum enrollment period,Check state DPC laws for billing requirements
+Clinical Partnerships,Phase 5: Clinical Operations,,Critical,-6,15,operations research,DPC Alliance for pre-negotiated rates,Cost-effective partnerships for patient care
+Laboratory Services,Phase 5: Clinical Operations,Clinical Partnerships,Critical,-6,4,operations research,Quest or LabCorp typically best rates,Essential for comprehensive care
+Imaging Partnerships,Phase 5: Clinical Operations,Clinical Partnerships,Important,-5,3,operations research,X-ray; MRI; CT; ultrasound access,"X-Ray services. Start with a mobile service (adult living facilities will often use them). If prices are over $100/x-ray (they should come to your location to do X-rays), then research urgent-care or other outpatient places that can offer X-rays for $75 or less."
+Advanced Imaging Partnerships,Phase 5: Clinical Operations,Clinical Partnerships,Important,-5,3,operations research,"MRI, CT, Ultrasound services","First look for outpatient, privately-owned imaging centers, then try orthopedic centers that will often have MRI / CT machines looking to be used."
+Specialist Network,Phase 5: Clinical Operations,Clinical Partnerships,Important,-5,6,operations research,Direct-pay friendly specialists,Build referral relationships
+Pharmacy Relationships,Phase 5: Clinical Operations,Clinical Partnerships,Important,-4,2,operations research,Generic medication access; compounding,Cost-effective medication access for patients
+Medical Supply Wholesaler,Phase 5: Clinical Operations,Clinical Partnerships,Important,-4,1,operations research,Office supplies and basic medical supplies,Streamline ordering and costs
+Patient Management Systems,Phase 5: Clinical Operations,,Critical,-4,10,operations forms,Legal review recommended for forms,Streamlined processes for patient interactions
+Patient Forms Development,Phase 5: Clinical Operations,Patient Management Systems,Critical,-4,4,operations forms,Patient agreement; registration; records release,Core documentation for patient relationships
+Appointment Workflows,Phase 5: Clinical Operations,Patient Management Systems,Critical,-3,3,operations,Scheduling; check-in; checkout processes,Efficient patient flow
+Communication Protocols,Phase 5: Clinical Operations,Patient Management Systems,Important,-3,2,operations,Appointment reminders; follow-up procedures,Reduce no-shows and improve care
+Medicare Opt-Out Process,Phase 5: Clinical Operations,Patient Management Systems,Critical,-3,1,legal forms,If opting out of Medicare,Required documentation for Medicare patients
+Location & Physical Setup,Phase 6: Pre-Launch Prep,,Critical,-4,8,operations decisions,Mobile; home-based; or clinic space,Align with service delivery model
+Office Setup,Phase 6: Pre-Launch Prep,Location & Physical Setup,Critical,-3,6,operations,Equipment; supplies; furniture,Create professional; efficient workspace
+Medical Equipment,Phase 6: Pre-Launch Prep,Location & Physical Setup,Critical,-3,4,operations,Based on services offered,Stock essential examination and diagnostic tools
+Supply Inventory,Phase 6: Pre-Launch Prep,Location & Physical Setup,Important,-2,2,operations,Office and medical supplies,Initial inventory for operations
+Final Launch Checklist,Phase 6: Pre-Launch Prep,,Critical,-1,4,operations,All systems testing,Ensure everything works before first patients
+Software Testing,Phase 6: Pre-Launch Prep,Final Launch Checklist,Critical,-1,2,technology,End-to-end workflow testing,Test all systems with sample patients
+Staff Training,Phase 6: Pre-Launch Prep,Final Launch Checklist,Important,-1,1,operations,If hiring staff initially,Ensure team understands all processes
+Marketing Launch,Phase 6: Pre-Launch Prep,Final Launch Checklist,Critical,0,1,marketing,Announce opening to community,Coordinate launch announcement
+New Patient Onboarding Flow,Phase 6: Pre-Launch Prep,Final Launch Checklist,Critical,-2,1,,,
+Appointment Scheduling + Walk-in Flow,Phase 6: Pre-Launch Prep,Final Launch Checklist,Critical,-1,1,,,
