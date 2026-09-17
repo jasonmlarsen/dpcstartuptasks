@@ -22,6 +22,14 @@ _Avoid_: Collaborator, team member, user
 The operator of the whole product, who edits the Task Library for every Practice. Not a role within a Practice.
 _Avoid_: Superuser, staff
 
+**Membership**:
+The link between a User and the one Practice they belong to, carrying their role of Owner or Member. A User belongs to exactly one Practice.
+_Avoid_: Seat, role assignment, affiliation
+
+**Invite**:
+An Owner's outstanding offer of a Membership to an email address. Counts against the Practice's three-person cap while it is pending, so acceptance can never breach the cap.
+_Avoid_: Invitation link, request, pending user
+
 ### Content
 
 **Task Library**:
@@ -68,6 +76,28 @@ _Avoid_: N/A as a stored value, skipped, dismissed, hidden
 A Practice's own writing on a Task. Never visible to the Admin or to other Practices, and never authored in raw HTML.
 _Avoid_: Comment, annotation
 
+**Task Entry**:
+A Practice's row for one Task, carrying its Status, Private Note and target date. Exists for every Task from the moment a Practice is created, not only once the Practice has touched it — so "no Entry" never means anything.
+_Avoid_: Override (it is not only present when something changed), progress record, task instance
+
 **Override**:
-The per-Practice layer on top of a Global Task: Status, Private Note, target date, ordering. A Practice may never rename or rewrite a Global Task's Body.
-_Avoid_: Customization, edit, fork
+The *concept* of the Practice-owned layer sitting on top of the Admin-owned Task Library. The thing that holds it is a Task Entry. A Practice may never rename or rewrite a Global Task's Body.
+_Avoid_: using this word for the row itself — that is a Task Entry
+
+**Newly Added**:
+A Global Task published after a Practice already existed, flagged to that Practice until someone there opens it. Tasks present when the Practice was created are never Newly Added.
+_Avoid_: Unread, unseen, updated
+
+**Retired**:
+A Global Task the Admin has withdrawn from the Task Library. Never deleted, because Practices have Task Entries against it and may already have done the work.
+_Avoid_: Deleted, archived, disabled
+
+### Consent
+
+**Email Consent**:
+A User's permission to be sent occasional non-transactional email. Asked once, at registration, as a checkbox that is ticked by default and never a condition of using the product — Launch Tasks is free and stays usable whether or not it is given.
+_Avoid_: Subscription (that is Kit's word for its own state), opt-in, marketing permission
+
+**Consent Wording**:
+The exact sentence a User agreed to, identified by a version. The wording is versioned and never rewritten in place, so an old version always means what it meant.
+_Avoid_: Terms, policy, disclaimer
