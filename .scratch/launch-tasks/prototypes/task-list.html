@@ -1,0 +1,572 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>PROTOTYPE — Launch Tasks: task list screen</title>
+<!--
+  THROWAWAY PROTOTYPE. Not production code. Answers wayfinder ticket #3:
+  "Prototype: the task list screen, and the visual language".
+  Three structurally different variants of the task list screen, switchable
+  via ?variant=A|B|C and the floating bottom bar. Real data: 99 tasks,
+  11 phases, from dpc-enhanced-tasks-2026-starter-file.csv (Phase 12 cut per #2).
+  State is in memory only. Refresh resets.
+-->
+<link rel="stylesheet" href="../../../styles/design-tokens.css" />
+<style>
+  body { background: var(--gray-50); color: var(--gray-800); padding-bottom: 6rem; }
+  .wrap { max-width: var(--container-width); margin: 0 auto; padding: var(--space-6) var(--space-4); }
+  h1,h2,h3 { color: var(--gray-900); line-height: 1.25; }
+  a { color: var(--primary-dark); }
+  button { font: inherit; cursor: pointer; border: none; background: none; color: inherit; }
+
+  /* --- shared app chrome (same in every variant, so variants are judged, not the header) --- */
+  .appbar { background: var(--white); border-bottom: 1px solid var(--gray-200); position: sticky; top: 0; z-index: 20; }
+  .appbar .wrap { display: flex; align-items: center; gap: var(--space-4); padding-top: var(--space-4); padding-bottom: var(--space-4); }
+  .brand { font-weight: 700; color: var(--gray-900); letter-spacing: -0.01em; }
+  .brand span { color: var(--primary); }
+  .practice { margin-left: auto; color: var(--gray-500); font-size: 0.875rem; }
+
+  .pill { display: inline-flex; align-items: center; gap: var(--space-1); font-size: 0.75rem; font-weight: 600;
+          padding: 0.15rem var(--space-2); border-radius: var(--radius-sm); }
+  .pill-state { background: #fff7ed; color: var(--accent-dark); }
+  .pill-new { background: #ecfeff; color: var(--secondary-dark); }
+  .muted { color: var(--gray-500); }
+  .body-text { color: var(--gray-700); line-height: 1.65; }
+  .links { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-top: var(--space-3); }
+  .links a { display: inline-flex; align-items: center; gap: var(--space-2); font-size: 0.875rem; font-weight: 600;
+             background: var(--gray-100); padding: var(--space-2) var(--space-3); border-radius: var(--radius-md); text-decoration: none; }
+  .links a:hover { background: var(--gray-200); }
+  .deps { margin-top: var(--space-3); font-size: 0.875rem; color: var(--gray-500); font-style: italic; }
+  .notefield { margin-top: var(--space-4); width: 100%; border: 1px solid var(--gray-300); border-radius: var(--radius-md);
+               padding: var(--space-3); font: inherit; font-size: 0.9375rem; min-height: 4.5rem; background: var(--white); }
+  .statebar { color: var(--accent-dark); background: #fff7ed; border-left: 3px solid var(--accent);
+              padding: var(--space-2) var(--space-3); border-radius: var(--radius-sm); font-size: 0.875rem; margin-top: var(--space-3); }
+
+  /* status dot control */
+  .dot { width: 1.5rem; height: 1.5rem; border-radius: 999px; border: 2px solid var(--gray-300); flex: none;
+         display: grid; place-items: center; background: var(--white); transition: var(--transition-fast); }
+  .dot:hover { border-color: var(--primary); }
+  .dot.done { background: var(--success); border-color: var(--success); color: var(--white); }
+  .dot.in_progress { border-color: var(--primary); border-style: dashed; }
+  .dot.in_progress::after { content:''; width: .55rem; height: .55rem; border-radius: 999px; background: var(--primary); }
+  .dot.na { border-style: dotted; border-color: var(--gray-300); color: var(--gray-400); }
+  .dot svg { width: .9rem; height: .9rem; }
+
+  .progresstrack { height: .5rem; border-radius: 999px; background: var(--gray-200); overflow: hidden; display:flex; }
+  .progresstrack i { display: block; height: 100%; background: var(--success); }
+  .progresstrack i.p { background: var(--primary-light); }
+
+  /* ---------- VARIANT A: phased checklist ---------- */
+  .a-hero { background: var(--white); border: 1px solid var(--gray-200); border-radius: var(--radius-lg); padding: var(--space-6); margin-bottom: var(--space-6); }
+  .a-hero h1 { font-size: 1.5rem; margin-bottom: var(--space-2); }
+  .a-stats { display: flex; gap: var(--space-6); margin-top: var(--space-4); font-size: 0.875rem; color: var(--gray-500); }
+  .a-stats b { color: var(--gray-900); font-size: 1.25rem; display: block; }
+  .a-phase { background: var(--white); border: 1px solid var(--gray-200); border-radius: var(--radius-lg); margin-bottom: var(--space-4); overflow: hidden; }
+  .a-phase > header { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-4) var(--space-5); cursor: pointer; }
+  .a-phase > header:hover { background: var(--gray-50); }
+  .a-phase h2 { font-size: 1rem; }
+  .a-phase .count { margin-left: auto; font-size: 0.8125rem; color: var(--gray-500); font-variant-numeric: tabular-nums; }
+  .a-row { display: flex; gap: var(--space-3); padding: var(--space-3) var(--space-5); border-top: 1px solid var(--gray-100); align-items: flex-start; }
+  .a-row .t { flex: 1; text-align: left; font-size: 0.9375rem; color: var(--gray-800); padding-top: .15rem; }
+  .a-row.done .t { color: var(--gray-400); text-decoration: line-through; }
+  .a-row.na .t { color: var(--gray-400); }
+  .a-detail { padding: 0 var(--space-5) var(--space-5) calc(var(--space-5) + 2.25rem); border-top: 1px solid var(--gray-100); background: var(--gray-50); }
+  .a-detail .body-text { padding-top: var(--space-4); }
+  .a-nacount { padding: var(--space-3) var(--space-5); border-top: 1px solid var(--gray-100); font-size: .8125rem; color: var(--gray-400); }
+
+  /* ---------- VARIANT B: one thing at a time ---------- */
+  .b-shell { max-width: 46rem; margin: 0 auto; }
+  .b-kicker { text-transform: uppercase; letter-spacing: .08em; font-size: .75rem; font-weight: 700; color: var(--primary); }
+  .b-card { background: var(--white); border-radius: var(--radius-xl); box-shadow: var(--shadow-lg); padding: var(--space-8); margin: var(--space-6) 0; }
+  .b-card h1 { font-size: 1.75rem; margin: var(--space-2) 0 var(--space-4); }
+  .b-actions { display: flex; flex-wrap: wrap; gap: var(--space-3); margin-top: var(--space-6); }
+  .btn { padding: var(--space-3) var(--space-5); border-radius: var(--radius-md); font-weight: 600; font-size: .9375rem; }
+  .btn-primary { background: var(--success); color: var(--white); box-shadow: var(--shadow-sm); }
+  .btn-ghost { background: var(--gray-100); color: var(--gray-700); }
+  .b-next { display: grid; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); gap: var(--space-3); }
+  .b-next button { background: var(--white); border: 1px solid var(--gray-200); border-radius: var(--radius-lg);
+                   padding: var(--space-4); text-align: left; font-size: .9375rem; }
+  .b-next button:hover { border-color: var(--primary); box-shadow: var(--shadow-sm); }
+  .b-index { margin-top: var(--space-8); background: var(--white); border: 1px solid var(--gray-200); border-radius: var(--radius-lg); }
+  .b-index > button { width: 100%; text-align: left; padding: var(--space-4) var(--space-5); font-weight: 600; }
+  .b-index li { list-style: none; display: flex; gap: var(--space-3); padding: var(--space-2) var(--space-5); border-top: 1px solid var(--gray-100); font-size: .875rem; }
+  .b-index li.done span { color: var(--gray-400); text-decoration: line-through; }
+  .b-index h4 { padding: var(--space-3) var(--space-5) var(--space-1); font-size: .75rem; text-transform: uppercase;
+                letter-spacing: .06em; color: var(--gray-400); border-top: 1px solid var(--gray-100); }
+
+  /* ---------- VARIANT C: journey ---------- */
+  .c-grid { display: grid; grid-template-columns: 17rem 1fr; gap: var(--space-8); align-items: start; }
+  .c-rail { position: sticky; top: 5.5rem; }
+  .c-station { display: grid; grid-template-columns: 1.75rem 1fr; gap: var(--space-3); align-items: start;
+               width: 100%; text-align: left; padding: var(--space-2) 0; position: relative; }
+  .c-station .mark { width: 1.75rem; height: 1.75rem; border-radius: 999px; display: grid; place-items: center;
+                     background: var(--white); border: 2px solid var(--gray-300); color: var(--gray-400);
+                     font-size: .75rem; font-weight: 700; z-index: 1; }
+  .c-station.done .mark { background: var(--success); border-color: var(--success); color: var(--white); }
+  .c-station.current .mark { border-color: var(--primary); color: var(--primary); box-shadow: 0 0 0 4px #dbeafe; }
+  .c-station:not(:last-child)::before { content:''; position:absolute; left: .8rem; top: 2.2rem; bottom: -.4rem; width: 2px; background: var(--gray-200); }
+  .c-station.done:not(:last-child)::before { background: var(--success); }
+  .c-station .nm { font-size: .875rem; color: var(--gray-600); padding-top: .2rem; }
+  .c-station.current .nm { color: var(--gray-900); font-weight: 700; }
+  .c-station .sub { display:block; font-size: .75rem; color: var(--gray-400); font-weight: 400; }
+  .c-head { margin-bottom: var(--space-6); }
+  .c-head h1 { font-size: 1.75rem; }
+  .c-task { background: var(--white); border: 1px solid var(--gray-200); border-left: 4px solid var(--gray-200);
+            border-radius: var(--radius-lg); padding: var(--space-5); margin-bottom: var(--space-4); }
+  .c-task.done { border-left-color: var(--success); opacity: .6; }
+  .c-task.in_progress { border-left-color: var(--primary); }
+  .c-task h3 { font-size: 1.0625rem; }
+  .c-seg { display: inline-flex; border: 1px solid var(--gray-200); border-radius: var(--radius-md); overflow: hidden; margin-top: var(--space-4); }
+  .c-seg button { padding: var(--space-2) var(--space-3); font-size: .8125rem; color: var(--gray-500); border-right: 1px solid var(--gray-200); }
+  .c-seg button:last-child { border-right: none; }
+  .c-seg button[aria-pressed="true"] { background: var(--primary); color: var(--white); }
+  .c-done-banner { background: #ecfdf5; border: 1px solid #a7f3d0; color: var(--secondary-dark);
+                   border-radius: var(--radius-lg); padding: var(--space-4) var(--space-5); margin-bottom: var(--space-5); font-size: .9375rem; }
+
+
+  /* ---------- VARIANT D: journey + detail drawer ---------- */
+  .d-cap { font-size: .6875rem; text-transform: uppercase; letter-spacing: .08em; font-weight: 700;
+           color: var(--gray-400); margin: var(--space-6) 0 var(--space-2); }
+  .d-cap:first-of-type { margin-top: 0; }
+  .d-card { cursor: pointer; display: flex; gap: var(--space-3); align-items: flex-start; width: 100%; text-align: left;
+            background: var(--white); border: 1px solid var(--gray-200); border-left: 4px solid var(--gray-200);
+            border-radius: var(--radius-lg); padding: var(--space-4) var(--space-5); margin-bottom: var(--space-3);
+            transition: box-shadow var(--transition-fast), border-color var(--transition-fast); }
+  .d-card:hover { box-shadow: var(--shadow-md); border-color: var(--gray-300); }
+  .d-card:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+  .d-card.moved { animation: landed 900ms ease-out; }
+  @keyframes landed {
+    0%   { box-shadow: 0 0 0 3px #bfdbfe; transform: translateY(-.35rem); }
+    100% { box-shadow: var(--shadow-sm); transform: none; }
+  }
+  .d-card .grow > * { margin: 0; }
+  .d-card.in_progress { border-left-color: var(--primary); }
+  .d-card.done { border-left-color: var(--success); background: var(--gray-50); }
+  .d-card.na { border-left-color: var(--gray-200); background: var(--gray-50); }
+  .d-card .grow { flex: 1; min-width: 0; }
+  .d-card h3 { font-size: 1rem; }
+  .d-card.done h3, .d-card.na h3 { color: var(--gray-400); font-weight: 500; }
+  .d-card.done h3 { text-decoration: line-through; }
+  .d-snip { font-size: .875rem; color: var(--gray-500); line-height: 1.55; margin-top: var(--space-1);
+            display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .d-card.done .d-snip, .d-card.na .d-snip { display: none; }
+  .d-meta { display: flex; flex-wrap: wrap; gap: var(--space-3); margin-top: var(--space-3); font-size: .75rem; color: var(--gray-400); }
+  .d-chev { color: var(--gray-300); align-self: center; font-size: 1.1rem; }
+
+  .scrim { position: fixed; inset: 0; background: rgba(17,24,39,.4); z-index: 900; opacity: 0;
+           transition: opacity var(--transition-normal); }
+  .scrim.open { opacity: 1; }
+  .drawer { position: fixed; top: 0; right: 0; bottom: 0; width: min(34rem, 94vw); background: var(--white);
+            box-shadow: var(--shadow-xl); z-index: 901; display: flex; flex-direction: column;
+            transform: translateX(100%); transition: transform var(--transition-normal); }
+  .drawer.open { transform: none; }
+  .drawer .dhead { padding: var(--space-5) var(--space-6) var(--space-4); border-bottom: 1px solid var(--gray-200); }
+  .drawer .dhead .kick { font-size: .6875rem; text-transform: uppercase; letter-spacing: .08em; color: var(--gray-400); font-weight: 700; }
+  .drawer .dhead h2 { font-size: 1.25rem; margin-top: var(--space-1); padding-right: var(--space-8); }
+  .drawer .close { position: absolute; top: var(--space-4); right: var(--space-4); width: 2rem; height: 2rem;
+                   border-radius: 999px; background: var(--gray-100); color: var(--gray-500); font-size: 1.1rem; line-height: 1; }
+  .drawer .dbody { overflow-y: auto; padding: var(--space-6); flex: 1; -webkit-overflow-scrolling: touch; }
+  .drawer .dfoot { border-top: 1px solid var(--gray-200); padding: var(--space-4) var(--space-6);
+                   padding-bottom: calc(var(--space-4) + env(safe-area-inset-bottom)); background: var(--white); }
+  .drawer .dfoot .c-seg { margin-top: 0; width: 100%; }
+  .drawer .dfoot .c-seg button { flex: 1; text-align: center; }
+  .drawer .grip { display: none; }
+  .datefield { border: 1px solid var(--gray-300); border-radius: var(--radius-md); padding: var(--space-2) var(--space-3); font: inherit; font-size: .9375rem; }
+
+  @media (max-width: 800px) {
+    .drawer { top: auto; left: 0; right: 0; width: auto; height: 90dvh; border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+              transform: translateY(100%); }
+    .drawer.open { transform: none; }
+    .drawer .grip { display: block; width: 2.5rem; height: .25rem; border-radius: 999px; background: var(--gray-300);
+                    margin: var(--space-3) auto var(--space-1); }
+    .drawer .dhead { padding: var(--space-2) var(--space-5) var(--space-4); }
+    .drawer .dbody { padding: var(--space-5); }
+    .drawer .dfoot { padding: var(--space-3) var(--space-4); padding-bottom: calc(var(--space-4) + env(safe-area-inset-bottom)); }
+    .drawer .close { top: var(--space-4); right: var(--space-3); }
+  }
+
+
+  /* link treatment 2: vertical list with the source shown */
+  .linklist { margin-top: var(--space-3); border: 1px solid var(--gray-200); border-radius: var(--radius-md); overflow: hidden; }
+  .linklist a { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3) var(--space-4);
+                text-decoration: none; border-bottom: 1px solid var(--gray-100); background: var(--white); }
+  .linklist a:last-child { border-bottom: none; }
+  .linklist a:hover { background: var(--gray-50); }
+  .linklist .lt { flex: 1; min-width: 0; }
+  .linklist .lt strong { display: block; font-size: .9375rem; color: var(--primary-dark); font-weight: 600; line-height: 1.35; }
+  .linklist .lt span { display: block; font-size: .75rem; color: var(--gray-400); margin-top: .1rem; }
+  .linklist .arrow { color: var(--gray-300); font-size: 1rem; }
+  .cmp { font-size: .625rem; text-transform: uppercase; letter-spacing: .1em; font-weight: 700; color: var(--white);
+         background: var(--gray-900); padding: .15rem var(--space-2); border-radius: var(--radius-sm);
+         display: inline-block; margin-top: var(--space-6); }
+
+  /* ---------- switcher (deliberately ugly, not part of the design) ---------- */
+  #switcher { position: fixed; bottom: var(--space-4); left: 50%; transform: translateX(-50%); z-index: 999;
+              background: var(--gray-900); color: var(--white); border-radius: 999px; display: flex; align-items: center;
+              gap: var(--space-2); padding: var(--space-2) var(--space-3); box-shadow: var(--shadow-xl); font-size: .8125rem; }
+  #switcher button { color: var(--white); padding: 0 var(--space-2); font-size: 1rem; }
+  #switcher .lbl { min-width: 16rem; text-align: center; font-weight: 600; }
+
+  @media (max-width: 800px) {
+    .c-grid { grid-template-columns: 1fr; }
+    .c-rail { position: static; display: flex; gap: var(--space-2); overflow-x: auto; padding-bottom: var(--space-2); }
+    .c-station { width: auto; grid-template-columns: 1fr; min-width: 8.5rem; }
+    .c-station::before { display: none !important; }
+    .a-stats { gap: var(--space-4); }
+    .b-card { padding: var(--space-5); }
+    #switcher .lbl { min-width: 9rem; font-size: .75rem; }
+  }
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div id="switcher" hidden></div>
+<script>
+const DATA = {"tasks": [{"id": 1, "slug": "business-name-brainstorm-research", "title": "Business Name Brainstorm & Research", "phase": "Phase 1: Foundation & Planning", "body": "Brainstorm names and research availability and trademark conflicts. Start at state level, then federal.", "state_specific": false, "links": [], "depends_on": []}, {"id": 2, "slug": "business-structure-decision", "title": "Business Structure Decision", "phase": "Phase 1: Foundation & Planning", "body": "LLC vs PLLC vs PC. Most go with PLLC / LLC, eventually to be taxed as S-Corp once income is over $100k or so.", "state_specific": true, "links": [], "depends_on": []}, {"id": 3, "slug": "register-legal-business-name", "title": "Register Legal Business Name", "phase": "Phase 1: Foundation & Planning", "body": "File Articles of Organization/Incorporation with State.", "state_specific": true, "links": [], "depends_on": [2]}, {"id": 4, "slug": "file-trade-name-s-dba-doing-business-as-names-if-necessary", "title": "File Trade Name(s) / DBA (\"Doing Business As\" names) if necessary", "phase": "Phase 1: Foundation & Planning", "body": "Doing Business As for patient-facing brand name", "state_specific": true, "links": [], "depends_on": [3]}, {"id": 5, "slug": "obtain-ein-employer-identification-number", "title": "Obtain EIN (Employer Identification Number)", "phase": "Phase 1: Foundation & Planning", "body": "Employer Identification Number from IRS (don't buy from third party)", "state_specific": false, "links": [{"label": "IRS \u2014 Apply for an EIN online", "url": "https://www.irs.gov/businesses/small-businesses-self-employed/apply-for-an-employer-identification-number-ein-online"}, {"label": "IRS \u2014 Form SS-4 (PDF)", "url": "https://www.irs.gov/pub/irs-pdf/fss4.pdf"}, {"label": "Direct Care Tools \u2014 What a new practice needs an EIN for", "url": "https://directcaretools.com/articles/ein/"}], "depends_on": [3]}, {"id": 6, "slug": "membership-pricing-strategy-break-even-analysis", "title": "Membership Pricing Strategy / Break-Even Analysis", "phase": "Phase 1: Foundation & Planning", "body": "Decide membership pricing structure. Hint: keep it simple.", "state_specific": false, "links": [{"label": "DPC Pricing Tool", "url": "https://dpcpricing.directcaretools.com/"}], "depends_on": []}, {"id": 7, "slug": "location-selection-research", "title": "Location Selection Research", "phase": "Phase 1: Foundation & Planning", "body": "Mobile vs. Fixed location. Tip: Street visibility isn't that important", "state_specific": false, "links": [{"label": "Direct Care Tools \u2014 Choosing a location", "url": "https://directcaretools.com/articles/location-selection/"}, {"label": "DPC Alliance \u2014 Member practice map", "url": "https://dpcalliance.org/"}, {"label": "SBA \u2014 Pick your business location", "url": "https://www.sba.gov/business-guide/launch-your-business/pick-your-business-location"}, {"label": "Census \u2014 Find demographics for a ZIP code", "url": "https://data.census.gov/"}, {"label": "Direct Care Tools \u2014 Signing your first commercial lease without a broker", "url": "https://directcaretools.com/articles/first-lease/"}], "depends_on": []}, {"id": 8, "slug": "join-dpc-alliance", "title": "Join DPC Alliance", "phase": "Phase 1: Foundation & Planning", "body": "A group of like-minded physicians with some great membership benefits.", "state_specific": false, "links": [{"label": "DPC Alliance", "url": "https://dpcalliance.org/"}], "depends_on": []}, {"id": 9, "slug": "state-medical-license-verification", "title": "State Medical License Verification", "phase": "Phase 2: Credentialing & Compliance", "body": "Ensure your medical license is active and unrestricted in your practicing state", "state_specific": true, "links": [], "depends_on": []}, {"id": 10, "slug": "dea-registration", "title": "DEA Registration", "phase": "Phase 2: Credentialing & Compliance", "body": "Self explanatory!", "state_specific": false, "links": [], "depends_on": [9]}, {"id": 11, "slug": "npi-number-application-update", "title": "NPI Number Application / Update", "phase": "Phase 2: Credentialing & Compliance", "body": "Make sure your NPI number information is updated and active", "state_specific": false, "links": [], "depends_on": [9]}, {"id": 12, "slug": "state-prescriber-id", "title": "State Prescriber ID", "phase": "Phase 2: Credentialing & Compliance", "body": "State-specific prescriber identifier (if applicable)", "state_specific": true, "links": [], "depends_on": [9]}, {"id": 13, "slug": "pdmp-registration", "title": "PDMP Registration", "phase": "Phase 2: Credentialing & Compliance", "body": "Prescription Drug Monitoring Program access", "state_specific": true, "links": [], "depends_on": [12]}, {"id": 14, "slug": "medicare-opt-out-filing", "title": "Medicare Opt-Out Filing", "phase": "Phase 2: Credentialing & Compliance", "body": "If you choose to opt-out of Medicare, this is essential.", "state_specific": false, "links": [], "depends_on": []}, {"id": 15, "slug": "telemedicine-licenses", "title": "Telemedicine Licenses", "phase": "Phase 2: Credentialing & Compliance", "body": "If you'd like to care for patients in other states, you likely need an active license from that state.", "state_specific": true, "links": [], "depends_on": [9]}, {"id": 16, "slug": "obtain-business-license", "title": "Obtain Business License", "phase": "Phase 2: Credentialing & Compliance", "body": "City or county business operating license", "state_specific": true, "links": [], "depends_on": [3]}, {"id": 17, "slug": "state-dpc-law-compliance", "title": "State DPC Law Compliance", "phase": "Phase 2: Credentialing & Compliance", "body": "Review state-specific DPC regulations (don't just rely on AI summaries!)", "state_specific": true, "links": [], "depends_on": []}, {"id": 18, "slug": "banking-setup", "title": "Banking Setup", "phase": "Phase 3: Financial Infrastructure", "body": "Open business bank account", "state_specific": false, "links": [], "depends_on": [5]}, {"id": 19, "slug": "business-credit-card", "title": "Business Credit Card", "phase": "Phase 3: Financial Infrastructure", "body": "Separate business expenses build credit", "state_specific": false, "links": [], "depends_on": [18]}, {"id": 20, "slug": "bookkeeping-in-house-or-hire", "title": "Bookkeeping: In-house or hire?", "phase": "Phase 3: Financial Infrastructure", "body": "We recommend hiring this out asap, unless you're familiar with bookkeeping.", "state_specific": false, "links": [], "depends_on": [18]}, {"id": 21, "slug": "payroll-system-setup", "title": "Payroll System Setup", "phase": "Phase 3: Financial Infrastructure", "body": "Consider having bookkeeper do this. Not necessary if you're not hiring employees!", "state_specific": false, "links": [], "depends_on": [18]}, {"id": 22, "slug": "accounting-software", "title": "Accounting software", "phase": "Phase 3: Financial Infrastructure", "body": "If hiring bookkeeper, they'll have it. If not, use Xero or Quickbooks.", "state_specific": false, "links": [], "depends_on": [20]}, {"id": 23, "slug": "startup-funding-secured", "title": "Startup Funding Secured", "phase": "Phase 3: Financial Infrastructure", "body": "Highly recommend bootstrapping, but if securing funds, do not use credit card debt to fund", "state_specific": false, "links": [], "depends_on": [6]}, {"id": 24, "slug": "malpractice-insurance", "title": "Malpractice Insurance", "phase": "Phase 3: Financial Infrastructure", "body": "Recommend going through DPC Alliance to find malpractice insurance", "state_specific": false, "links": [{"label": "DPC Alliance", "url": "https://dpcalliance.org/"}], "depends_on": [9]}, {"id": 25, "slug": "general-liability-insurance", "title": "General Liability Insurance", "phase": "Phase 3: Financial Infrastructure", "body": "General coverage (slip & fall, plus other general coverages)", "state_specific": false, "links": [], "depends_on": [3]}, {"id": 26, "slug": "cyber-liability-insurance", "title": "Cyber Liability Insurance", "phase": "Phase 3: Financial Infrastructure", "body": "Data breach coverage (ask what comes with malpractice, pair either w/ malpractice or general liability)", "state_specific": false, "links": [], "depends_on": [3]}, {"id": 27, "slug": "domain-name", "title": "Domain Name", "phase": "Phase 4: Technology", "body": "This is \"yourdomainname.com\" and will be used for email, website, etc. - should only cost ~$12-30/year", "state_specific": false, "links": [], "depends_on": []}, {"id": 28, "slug": "emr-system-selection", "title": "EMR System Selection", "phase": "Phase 4: Technology", "body": "Major systems for DPC are Elation, Hint, AtlasMD, AkuteHealth, and others", "state_specific": false, "links": [], "depends_on": []}, {"id": 29, "slug": "membership-billing-software", "title": "Membership Billing Software", "phase": "Phase 4: Technology", "body": "For automated recurring billing, accepting payments in person, and more. Major systems are AtlasMD, Hint, Quickbooks, and others", "state_specific": false, "links": [], "depends_on": []}, {"id": 30, "slug": "telehealth-platform", "title": "Telehealth Platform", "phase": "Phase 4: Technology", "body": "Will often pair with your EMR: check for HIPAA compliance if not", "state_specific": false, "links": [], "depends_on": [28]}, {"id": 31, "slug": "practice-email-system", "title": "Practice Email System", "phase": "Phase 4: Technology", "body": "Professional and scalable email system. Major players are Microsoft, Google, Zoho, and many others.", "state_specific": false, "links": [], "depends_on": []}, {"id": 32, "slug": "phone-system", "title": "Phone System", "phase": "Phase 4: Technology", "body": "Important to have a business line separate from cell phone. Many good options here.", "state_specific": false, "links": [], "depends_on": []}, {"id": 33, "slug": "secure-messaging-system", "title": "Secure Messaging System", "phase": "Phase 4: Technology", "body": "Patient Communication: HIPAA compliant if possible, but have necessary forms for email / insecure messaging.", "state_specific": false, "links": [], "depends_on": [31]}, {"id": 34, "slug": "electronic-fax-service", "title": "Electronic Fax Service", "phase": "Phase 4: Technology", "body": "HIPAA-compliant faxing - often will come with EMR", "state_specific": false, "links": [], "depends_on": [28]}, {"id": 35, "slug": "it-hire-or-manage-in-house", "title": "IT - hire or manage in-house?", "phase": "Phase 4: Technology", "body": "Decide if you are going to manage IT needs (computers, phone, storage, etc.) in-house or with a professional. Highly recommend eventually using a professional for security reasons.", "state_specific": false, "links": [], "depends_on": []}, {"id": 36, "slug": "data-backup-system", "title": "Data Backup System", "phase": "Phase 4: Technology", "body": "If you store anything of importance on local computers, ensure you have automated backups.", "state_specific": false, "links": [], "depends_on": [35]}, {"id": 37, "slug": "it-security-measures", "title": "IT Security Measures", "phase": "Phase 4: Technology", "body": "Understand how wifi, computer access, and much more is setup to ensure security.", "state_specific": false, "links": [], "depends_on": [35]}, {"id": 38, "slug": "password-manager", "title": "Password Manager", "phase": "Phase 4: Technology", "body": "HIGHLY recommend using a password manager such as Dashlane, 1Password, or others.", "state_specific": false, "links": [], "depends_on": [37]}, {"id": 39, "slug": "practice-website-development", "title": "Practice Website Development", "phase": "Phase 5: Brand & Marketing", "body": "Made mostly for potential members - should mostly act as a 'salesman' that informs people about membership.", "state_specific": false, "links": [], "depends_on": []}, {"id": 40, "slug": "website-hosting", "title": "Website Hosting", "phase": "Phase 5: Brand & Marketing", "body": "Unless paired with website maintenance, shouldn't cost more than $25 monthly.", "state_specific": false, "links": [], "depends_on": [39]}, {"id": 41, "slug": "website-maintenance", "title": "Website Maintenance", "phase": "Phase 5: Brand & Marketing", "body": "If you hire to have your site built, then ask about maintenance plans. If building yourself, update monthly or quarterly at least.", "state_specific": false, "links": [], "depends_on": [39]}, {"id": 42, "slug": "seo-setup", "title": "SEO Setup", "phase": "Phase 5: Brand & Marketing", "body": "Ensure your website includes all necessary SEO information for local search.", "state_specific": false, "links": [{"label": "PUT LINK TO ARTICLE HERE!!!!", "url": "#"}], "depends_on": [39]}, {"id": 43, "slug": "google-business-profile", "title": "Google Business Profile", "phase": "Phase 5: Brand & Marketing", "body": "Start & claim your Google Business Profile after you know your location, have email & phone setup.", "state_specific": false, "links": [], "depends_on": [39]}, {"id": 44, "slug": "logo-brand-development", "title": "Logo / Brand Development", "phase": "Phase 5: Brand & Marketing", "body": "The cost for this is a huge range, especially with AI and other options on the internet. Logo, font, colors can always change. Invest only as much as you're comfortable - this is less important than most people think.", "state_specific": false, "links": [], "depends_on": [3]}, {"id": 45, "slug": "marketing-materials-design", "title": "Marketing Materials Design", "phase": "Phase 5: Brand & Marketing", "body": "Order of importance: business card, flyers, banners, signage", "state_specific": false, "links": [], "depends_on": [44]}, {"id": 46, "slug": "social-media-presence", "title": "Social Media Presence", "phase": "Phase 5: Brand & Marketing", "body": "Only start and have profiles that you'll remain at least semi-active on.", "state_specific": false, "links": [], "depends_on": [44]}, {"id": 47, "slug": "content-marketing-plan", "title": "Content Marketing Plan", "phase": "Phase 5: Brand & Marketing", "body": "Write for clarity - not for being cute or \"unique.\" It's better to make things crystal clear for your potential patients.", "state_specific": false, "links": [], "depends_on": [39]}, {"id": 48, "slug": "community-outreach-plan", "title": "Community Outreach Plan", "phase": "Phase 5: Brand & Marketing", "body": "Consider ribbon cutting, chamber of commerce events, and more", "state_specific": false, "links": [], "depends_on": []}, {"id": 49, "slug": "press-release-preparation", "title": "Press Release Preparation", "phase": "Phase 5: Brand & Marketing", "body": "Prepare a piece for local media outlets - email out 2-6 weeks prior to opening", "state_specific": false, "links": [], "depends_on": [44]}, {"id": 50, "slug": "email-marketing-setup", "title": "Email Marketing Setup", "phase": "Phase 5: Brand & Marketing", "body": "Consider using a mass newsletter solution like Kit, MailChimp or similar rather than internal mailing", "state_specific": false, "links": [], "depends_on": []}, {"id": 51, "slug": "patient-education-materials", "title": "Patient Education Materials", "phase": "Phase 5: Brand & Marketing", "body": "DPC model explanation wellness resources", "state_specific": false, "links": [], "depends_on": []}, {"id": 52, "slug": "list-of-services", "title": "List of Services", "phase": "Phase 6: Clinical Operations", "body": "Create a list of services that you do and do not provide and whether they are included in membership or not (tip: include as much as possible in membership to keep things simple).", "state_specific": false, "links": [], "depends_on": [6]}, {"id": 53, "slug": "formulary-development", "title": "Formulary Development", "phase": "Phase 6: Clinical Operations", "body": "Preferred medication list", "state_specific": false, "links": [], "depends_on": []}, {"id": 54, "slug": "medical-record-standards", "title": "Medical Record Standards", "phase": "Phase 6: Clinical Operations", "body": "Documentation requirements templates", "state_specific": false, "links": [], "depends_on": [28]}, {"id": 55, "slug": "prescription-policies", "title": "Prescription Policies", "phase": "Phase 6: Clinical Operations", "body": "Refill protocols controlled substances", "state_specific": false, "links": [], "depends_on": []}, {"id": 56, "slug": "after-hours-protocol", "title": "After-Hours Protocol", "phase": "Phase 6: Clinical Operations", "body": "On-call coverage emergency response", "state_specific": false, "links": [], "depends_on": [32]}, {"id": 57, "slug": "emergency-procedures", "title": "Emergency Procedures", "phase": "Phase 6: Clinical Operations", "body": "Code response emergency equipment", "state_specific": false, "links": [], "depends_on": []}, {"id": 58, "slug": "specialist-network-development", "title": "Specialist Network Development", "phase": "Phase 6: Clinical Operations", "body": "Referral relationships for common needs", "state_specific": false, "links": [], "depends_on": []}, {"id": 59, "slug": "pharmacy-relationships", "title": "Pharmacy Relationships", "phase": "Phase 6: Clinical Operations", "body": "Preferred pharmacy discount programs", "state_specific": false, "links": [], "depends_on": []}, {"id": 60, "slug": "lab-services-provider", "title": "Lab Services Provider", "phase": "Phase 6: Clinical Operations", "body": "In-office vs reference lab", "state_specific": false, "links": [], "depends_on": []}, {"id": 61, "slug": "imaging-center-network", "title": "Imaging Center Network", "phase": "Phase 6: Clinical Operations", "body": "X-ray MRI CT ultrasound contacts", "state_specific": false, "links": [], "depends_on": []}, {"id": 62, "slug": "dme-supplier-relationships", "title": "DME Supplier Relationships", "phase": "Phase 6: Clinical Operations", "body": "Durable medical equipment sources", "state_specific": false, "links": [], "depends_on": []}, {"id": 63, "slug": "mental-health-contacts", "title": "Mental Health Contacts", "phase": "Phase 6: Clinical Operations", "body": "Therapist psychiatrist network", "state_specific": false, "links": [], "depends_on": []}, {"id": 64, "slug": "home-health-coordination", "title": "Home Health Coordination", "phase": "Phase 6: Clinical Operations", "body": "Post-hospital care coordination", "state_specific": false, "links": [], "depends_on": []}, {"id": 65, "slug": "patient-membership-agreement", "title": "Patient Membership Agreement", "phase": "Phase 7: Patient Experience", "body": "Contract terms cancellation policy", "state_specific": false, "links": [], "depends_on": [17]}, {"id": 66, "slug": "member-handbook-creation", "title": "Member Handbook Creation", "phase": "Phase 7: Patient Experience", "body": "Services hours communication policies", "state_specific": false, "links": [], "depends_on": [65]}, {"id": 67, "slug": "patient-forms-development", "title": "Patient Forms Development", "phase": "Phase 7: Patient Experience", "body": "Intake medical history consent forms", "state_specific": false, "links": [], "depends_on": [28]}, {"id": 68, "slug": "new-patient-onboarding-flow", "title": "New Patient Onboarding Flow", "phase": "Phase 7: Patient Experience", "body": "Enrollment welcome process orientation", "state_specific": false, "links": [], "depends_on": [67]}, {"id": 69, "slug": "patient-communication-preferences", "title": "Patient Communication Preferences", "phase": "Phase 7: Patient Experience", "body": "Text email portal visit preferences", "state_specific": false, "links": [], "depends_on": [28]}, {"id": 70, "slug": "appointment-policies", "title": "Appointment Policies", "phase": "Phase 7: Patient Experience", "body": "Scheduling same-day urgent visit policies", "state_specific": false, "links": [], "depends_on": [28]}, {"id": 71, "slug": "cancellation-policy", "title": "Cancellation Policy", "phase": "Phase 7: Patient Experience", "body": "No-show late cancellation procedures", "state_specific": false, "links": [], "depends_on": [70]}, {"id": 72, "slug": "patient-feedback-system", "title": "Patient Feedback System", "phase": "Phase 7: Patient Experience", "body": "Satisfaction surveys improvement process", "state_specific": false, "links": [], "depends_on": []}, {"id": 73, "slug": "office-location-lease", "title": "Office Location Lease", "phase": "Phase 8: Physical Setup", "body": "Negotiate lease terms buildout allowance", "state_specific": false, "links": [], "depends_on": [7]}, {"id": 74, "slug": "office-design-layout", "title": "Office Design & Layout", "phase": "Phase 8: Physical Setup", "body": "Exam rooms waiting area workflow", "state_specific": false, "links": [], "depends_on": [73]}, {"id": 75, "slug": "office-buildout", "title": "Office Buildout", "phase": "Phase 8: Physical Setup", "body": "Construction improvements finishes", "state_specific": false, "links": [], "depends_on": [74]}, {"id": 76, "slug": "medical-equipment-purchase", "title": "Medical Equipment Purchase", "phase": "Phase 8: Physical Setup", "body": "Exam tables BP cuffs EKG etc", "state_specific": false, "links": [], "depends_on": [75]}, {"id": 77, "slug": "office-furniture", "title": "Office Furniture", "phase": "Phase 8: Physical Setup", "body": "Desks chairs waiting room", "state_specific": false, "links": [], "depends_on": [75]}, {"id": 78, "slug": "office-supplies", "title": "Office Supplies", "phase": "Phase 8: Physical Setup", "body": "The basics: pens, paper clips, printers, etc.", "state_specific": false, "links": [], "depends_on": [75]}, {"id": 79, "slug": "medical-supplies-inventory", "title": "Medical Supplies & Inventory", "phase": "Phase 8: Physical Setup", "body": "Clinical supplies office supplies", "state_specific": false, "links": [], "depends_on": [76]}, {"id": 80, "slug": "point-of-care-testing-setup", "title": "Point-of-Care Testing Setup", "phase": "Phase 8: Physical Setup", "body": "Urinalysis A1C strep flu etc (tip: make sure CLIA waivers include all tests you want: see Phase 10)", "state_specific": false, "links": [], "depends_on": []}, {"id": 81, "slug": "signage-installation", "title": "Signage Installation", "phase": "Phase 8: Physical Setup", "body": "Exterior building interior directional", "state_specific": false, "links": [], "depends_on": [75]}, {"id": 82, "slug": "utilities-services-setup", "title": "Utilities & Services Setup", "phase": "Phase 8: Physical Setup", "body": "Electric water internet janitorial", "state_specific": false, "links": [], "depends_on": [73]}, {"id": 83, "slug": "staff-hiring-plan", "title": "Staff Hiring Plan", "phase": "Phase 9: Staffing & Training", "body": "Job descriptions hiring timeline", "state_specific": false, "links": [], "depends_on": []}, {"id": 84, "slug": "employee-handbook", "title": "Employee Handbook", "phase": "Phase 9: Staffing & Training", "body": "Policies benefits expectations", "state_specific": false, "links": [], "depends_on": [83]}, {"id": 85, "slug": "hr-compliance-setup", "title": "HR Compliance Setup", "phase": "Phase 9: Staffing & Training", "body": "I-9 W-4 background checks", "state_specific": false, "links": [], "depends_on": [83]}, {"id": 86, "slug": "staff-training", "title": "Staff Training", "phase": "Phase 9: Staffing & Training", "body": "EMR phone systems clinical workflows", "state_specific": false, "links": [], "depends_on": []}, {"id": 87, "slug": "benefits-administration", "title": "Benefits Administration", "phase": "Phase 9: Staffing & Training", "body": "Health insurance retirement if offered", "state_specific": false, "links": [], "depends_on": [21]}, {"id": 88, "slug": "policies-procedures-manual", "title": "Policies & Procedures Manual", "phase": "Phase 10: Operational Readiness", "body": "TIP: No need to have this manual prepared - just have a binder or file ready to go. When you hire your first hire, part of their job is to keep this policies and procedures manual up-to-date, so then you have everything ready to go for new hires!", "state_specific": false, "links": [], "depends_on": []}, {"id": 89, "slug": "mock-patient-visits", "title": "Mock Patient Visits", "phase": "Phase 10: Operational Readiness", "body": "Practice workflows troubleshoot issues", "state_specific": false, "links": [], "depends_on": [86]}, {"id": 90, "slug": "soft-launch-planning", "title": "Soft Launch Planning", "phase": "Phase 10: Operational Readiness", "body": "Friends family limited enrollment", "state_specific": false, "links": [], "depends_on": [89]}, {"id": 91, "slug": "final-inspections", "title": "Final Inspections", "phase": "Phase 10: Operational Readiness", "body": "Fire safety health department", "state_specific": true, "links": [], "depends_on": [75]}, {"id": 92, "slug": "risk-management-review", "title": "Risk Management Review", "phase": "Phase 10: Operational Readiness", "body": "Final compliance check", "state_specific": false, "links": [], "depends_on": []}, {"id": 93, "slug": "hipaa-compliance-program-training", "title": "HIPAA Compliance Program / Training", "phase": "Phase 10: Operational Readiness", "body": "Understand how to remain HIPAA compliant, and if there's a breach, understand what needs to be done.", "state_specific": false, "links": [], "depends_on": []}, {"id": 94, "slug": "business-associate-agreements", "title": "Business Associate Agreements", "phase": "Phase 10: Operational Readiness", "body": "Make sure you have signed BAA's on file (vendors should have them available) for all who are handling PHI", "state_specific": false, "links": [], "depends_on": [93]}, {"id": 95, "slug": "clia-waiver-application-certificate", "title": "CLIA Waiver Application / Certificate", "phase": "Phase 10: Operational Readiness", "body": "Certificate for point-of-care testing if applicable (usually from the state)", "state_specific": true, "links": [], "depends_on": []}, {"id": 96, "slug": "controlled-substance-protocols", "title": "Controlled Substance Protocols", "phase": "Phase 10: Operational Readiness", "body": "Policies for prescribing, monitoring, storage of scheduled prescriptions", "state_specific": false, "links": [], "depends_on": []}, {"id": 97, "slug": "official-launch", "title": "Official Launch", "phase": "Phase 11: Launch", "body": "Open for business grand opening", "state_specific": false, "links": [], "depends_on": []}, {"id": 98, "slug": "launch-event", "title": "Launch Event", "phase": "Phase 11: Launch", "body": "Community celebration open house", "state_specific": false, "links": [], "depends_on": [97]}, {"id": 99, "slug": "press-outreach", "title": "Press Outreach", "phase": "Phase 11: Launch", "body": "Media announcements interviews", "state_specific": false, "links": [], "depends_on": [49]}], "phases": ["Phase 1: Foundation & Planning", "Phase 2: Credentialing & Compliance", "Phase 3: Financial Infrastructure", "Phase 4: Technology", "Phase 5: Brand & Marketing", "Phase 6: Clinical Operations", "Phase 7: Patient Experience", "Phase 8: Physical Setup", "Phase 9: Staffing & Training", "Phase 10: Operational Readiness", "Phase 11: Launch"], "state": {"1": "done", "2": "done", "3": "done", "4": "done", "5": "not_started", "6": "done", "7": "in_progress", "8": "done", "9": "in_progress", "10": "done", "11": "done", "12": "in_progress", "13": "done", "14": "done", "15": "in_progress", "16": "done", "17": "done", "18": "not_started", "19": "not_started", "20": "in_progress", "21": "not_started", "22": "not_started", "23": "not_started", "24": "in_progress", "25": "not_started", "26": "not_started", "27": "not_started", "28": "not_started", "29": "not_started", "30": "not_started", "31": "not_started", "32": "not_started", "33": "not_started", "34": "not_started", "35": "not_started", "36": "not_started", "37": "not_started", "38": "not_started", "39": "not_started", "40": "not_started", "41": "not_started", "42": "not_started", "43": "not_started", "44": "not_started", "45": "not_started", "46": "not_started", "47": "not_started", "48": "not_started", "49": "not_started", "50": "not_started", "51": "not_started", "52": "not_started", "53": "not_started", "54": "not_started", "55": "not_started", "56": "not_started", "57": "not_started", "58": "not_started", "59": "not_started", "60": "not_started", "61": "not_started", "62": "not_started", "63": "not_started", "64": "not_started", "65": "not_started", "66": "not_started", "67": "not_started", "68": "not_started", "69": "not_started", "70": "not_started", "71": "not_started", "72": "not_started", "73": "not_started", "74": "not_started", "75": "not_started", "76": "not_started", "77": "not_started", "78": "not_started", "79": "not_started", "80": "not_started", "81": "not_started", "82": "not_started", "83": "na", "84": "not_started", "85": "not_started", "86": "na", "87": "not_started", "88": "not_started", "89": "not_started", "90": "not_started", "91": "not_started", "92": "not_started", "93": "not_started", "94": "not_started", "95": "not_started", "96": "not_started", "97": "not_started", "98": "not_started", "99": "not_started"}};
+</script>
+<script>
+const VARIANTS = {
+  A: 'Phased checklist',
+  B: 'One thing at a time',
+  C: 'Journey map',
+  D: 'Journey map + drawer',
+};
+const params = new URLSearchParams(location.search);
+let variant = (params.get('variant') || 'D').toUpperCase();
+if (!VARIANTS[variant]) variant = 'A';
+
+const state = DATA.state;            // id -> not_started | in_progress | done | na
+const notes = {};                    // id -> string, in memory only
+const open = new Set();              // expanded task ids (variant A)
+const collapsedPhases = new Set();   // variant A
+let currentPhase = DATA.phases.findIndex(p => DATA.tasks.some(t => t.phase === p && state[t.id] !== 'done' && state[t.id] !== 'na'));
+if (currentPhase < 0) currentPhase = 0;
+let indexOpen = false;               // variant B
+let focusId = null;                  // variant B
+
+const byId = Object.fromEntries(DATA.tasks.map(t => [t.id, t]));
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const phaseTasks = p => DATA.tasks.filter(t => t.phase === p);
+const countable = ts => ts.filter(t => state[t.id] !== 'na');
+const doneCount = ts => ts.filter(t => state[t.id] === 'done').length;
+const shortPhase = p => p.replace(/^Phase \d+:\s*/, '');
+const phaseNum = p => p.match(/^Phase (\d+)/)[1];
+const unmetDeps = t => t.depends_on.map(d => byId[d]).filter(d => d && state[d.id] !== 'done' && state[d.id] !== 'na');
+const actionable = t => state[t.id] === 'not_started' && unmetDeps(t).length === 0;
+const CHECK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5"><path d="M20 6 9 17l-5-5"/></svg>';
+
+const totals = () => {
+  const c = countable(DATA.tasks);
+  return { done: doneCount(c), total: c.length, na: DATA.tasks.length - c.length,
+           inprog: c.filter(t => state[t.id] === 'in_progress').length };
+};
+
+function flash(id) {
+  movedId = id;
+  clearTimeout(flash.t);
+  flash.t = setTimeout(() => { movedId = null; }, 900);
+}
+function cycle(id) {
+  const order = ['not_started', 'in_progress', 'done', 'na'];
+  state[id] = order[(order.indexOf(state[id]) + 1) % order.length];
+  flash(id);
+  render();
+}
+function setState(id, s) { state[id] = s; flash(id); render(); }
+
+function dotHTML(id) {
+  const s = state[id];
+  return '<button class="dot ' + s + '" data-cycle="' + id + '" aria-label="Status: ' + s + '. Click to change.">' +
+         (s === 'done' ? CHECK : s === 'na' ? '&times;' : '') + '</button>';
+}
+function linksHTML(t) {
+  if (!t.links.length) return '';
+  return '<div class="links">' + t.links.map(l =>
+    '<a href="' + esc(l.url) + '" target="_blank" rel="noreferrer">' + esc(l.label) + ' &#8599;</a>').join('') + '</div>';
+}
+function depsHTML(t) {
+  const u = unmetDeps(t);
+  if (!u.length) return '';
+  return '<p class="deps">Usually comes after: ' + u.map(d => esc(d.title)).join(', ') + '</p>';
+}
+function stateLineHTML(t) {
+  return t.state_specific ? '<p class="statebar">Rules vary by state &mdash; check yours before you file.</p>' : '';
+}
+function appbar() {
+  return '<div class="appbar"><div class="wrap">' +
+    '<div class="brand">Launch<span>Tasks</span></div>' +
+    '<div class="practice">Cascade Family Direct Care &middot; Dr. A. Reyes</div>' +
+    '</div></div>';
+}
+
+/* ============================ VARIANT A ============================ */
+function VariantA() {
+  const tt = totals();
+  let h = appbar() + '<div class="wrap">';
+  h += '<div class="a-hero"><h1>Your launch checklist</h1>' +
+       '<p class="muted">' + tt.done + ' of ' + tt.total + ' tasks done. You are in ' + esc(shortPhase(DATA.phases[currentPhase])) + '.</p>' +
+       '<div class="progresstrack" style="margin-top:var(--space-4)">' +
+         '<i style="width:' + (100 * tt.done / tt.total) + '%"></i>' +
+         '<i class="p" style="width:' + (100 * tt.inprog / tt.total) + '%"></i></div>' +
+       '<div class="a-stats"><div><b>' + tt.done + '</b>done</div><div><b>' + tt.inprog + '</b>in progress</div>' +
+       '<div><b>' + (tt.total - tt.done - tt.inprog) + '</b>to go</div><div><b>' + tt.na + '</b>not applicable</div></div></div>';
+
+  DATA.phases.forEach((p, i) => {
+    const ts = phaseTasks(p), c = countable(ts), d = doneCount(c);
+    const collapsed = collapsedPhases.has(p) || (d === c.length && !collapsedPhases.has('!' + p));
+    h += '<section class="a-phase"><header data-phase="' + esc(p) + '">' +
+      '<span class="dot ' + (d === c.length ? 'done' : '') + '" aria-hidden="true">' + (d === c.length ? CHECK : phaseNum(p)) + '</span>' +
+      '<h2>' + esc(shortPhase(p)) + '</h2>' +
+      '<span class="count">' + d + '/' + c.length + '</span></header>';
+    if (!collapsed) {
+      const hidden = ts.filter(t => state[t.id] === 'na').length;
+      ts.filter(t => state[t.id] !== 'na').forEach(t => {
+        h += '<div class="a-row ' + state[t.id] + '">' + dotHTML(t.id) +
+             '<button class="t" data-open="' + t.id + '">' + esc(t.title) + '</button></div>';
+        if (open.has(t.id)) {
+          h += '<div class="a-detail"><div class="body-text">' + esc(t.body) + '</div>' +
+               stateLineHTML(t) + linksHTML(t) + depsHTML(t) +
+               '<textarea class="notefield" placeholder="Private notes for your practice&hellip;" data-note="' + t.id + '">' + esc(notes[t.id] || '') + '</textarea></div>';
+        }
+      });
+      if (hidden) h += '<div class="a-nacount">' + hidden + ' marked not applicable</div>';
+    }
+    h += '</section>';
+  });
+  return h + '</div>';
+}
+
+/* ============================ VARIANT B ============================ */
+function VariantB() {
+  const tt = totals();
+  const ready = DATA.tasks.filter(actionable);
+  const inprog = DATA.tasks.filter(t => state[t.id] === 'in_progress');
+  const queue = [...inprog, ...ready];
+  const focus = byId[focusId] && queue.includes(byId[focusId]) ? byId[focusId] : queue[0];
+  let h = appbar() + '<div class="wrap"><div class="b-shell">';
+  h += '<div class="progresstrack"><i style="width:' + (100 * tt.done / tt.total) + '%"></i></div>' +
+       '<p class="muted" style="margin-top:var(--space-2);font-size:.875rem">' + tt.done + ' of ' + tt.total + ' done &middot; ' +
+       esc(shortPhase(focus ? focus.phase : DATA.phases[currentPhase])) + '</p>';
+  if (!focus) {
+    h += '<div class="b-card"><h1>Nothing waiting on you right now.</h1></div>';
+  } else {
+    h += '<div class="b-card"><div class="b-kicker">Do this next</div><h1>' + esc(focus.title) + '</h1>' +
+      '<div class="body-text">' + esc(focus.body) + '</div>' + stateLineHTML(focus) + linksHTML(focus) +
+      '<textarea class="notefield" placeholder="Private notes&hellip;" data-note="' + focus.id + '">' + esc(notes[focus.id] || '') + '</textarea>' +
+      '<div class="b-actions">' +
+        '<button class="btn btn-primary" data-set="done:' + focus.id + '">Mark done</button>' +
+        (state[focus.id] === 'in_progress' ? '' : '<button class="btn btn-ghost" data-set="in_progress:' + focus.id + '">I have started this</button>') +
+        '<button class="btn btn-ghost" data-set="na:' + focus.id + '">Not applicable to me</button>' +
+      '</div></div>';
+  }
+  const others = queue.filter(t => t !== focus).slice(0, 3);
+  if (others.length) {
+    h += '<h3 style="font-size:.875rem;text-transform:uppercase;letter-spacing:.06em;color:var(--gray-500);margin-bottom:var(--space-3)">Also available now</h3><div class="b-next">';
+    others.forEach(t => { h += '<button data-focus="' + t.id + '"><strong>' + esc(t.title) + '</strong><br><span class="muted" style="font-size:.8125rem">' + esc(shortPhase(t.phase)) + '</span></button>'; });
+    h += '</div>';
+  }
+  h += '<div class="b-index"><button data-index="1">' + (indexOpen ? '&#9662;' : '&#9656;') + ' See the whole list (' + tt.total + ' tasks, 11 phases)</button>';
+  if (indexOpen) {
+    DATA.phases.forEach(p => {
+      const ts = phaseTasks(p), c = countable(ts);
+      h += '<h4>' + esc(shortPhase(p)) + ' &middot; ' + doneCount(c) + '/' + c.length + '</h4><ul>';
+      ts.forEach(t => { h += '<li class="' + state[t.id] + '">' + dotHTML(t.id) + '<span>' + esc(t.title) + '</span></li>'; });
+      h += '</ul>';
+    });
+  }
+  h += '</div></div></div>';
+  return h;
+}
+
+/* ============================ VARIANT C ============================ */
+function VariantC() {
+  const p = DATA.phases[currentPhase];
+  const ts = phaseTasks(p), c = countable(ts), d = doneCount(c);
+  const tt = totals();
+  let h = appbar() + '<div class="wrap"><div class="c-grid"><nav class="c-rail">';
+  DATA.phases.forEach((ph, i) => {
+    const pc = countable(phaseTasks(ph)), pd = doneCount(pc);
+    const cls = pd === pc.length ? 'done' : i === currentPhase ? 'current' : '';
+    h += '<button class="c-station ' + cls + '" data-goto="' + i + '">' +
+      '<span class="mark">' + (pd === pc.length ? CHECK : phaseNum(ph)) + '</span>' +
+      '<span class="nm">' + esc(shortPhase(ph)) + '<span class="sub">' + pd + '/' + pc.length + '</span></span></button>';
+  });
+  h += '</nav><main>';
+  h += '<div class="c-head"><p class="muted" style="font-size:.8125rem;text-transform:uppercase;letter-spacing:.06em">Phase ' + phaseNum(p) + ' of 11</p>' +
+       '<h1>' + esc(shortPhase(p)) + '</h1>' +
+       '<p class="muted">' + d + ' of ' + c.length + ' done here &middot; ' + tt.done + ' of ' + tt.total + ' overall</p></div>';
+  if (d === c.length) h += '<div class="c-done-banner"><strong>Phase complete.</strong> That is ' + tt.done + ' tasks behind you. Next: ' + esc(shortPhase(DATA.phases[Math.min(currentPhase + 1, 10)])) + '.</div>';
+  ts.forEach(t => {
+    h += '<article class="c-task ' + state[t.id] + '"><h3>' + esc(t.title) + '</h3>' +
+      '<div class="body-text" style="margin-top:var(--space-2)">' + esc(t.body) + '</div>' +
+      stateLineHTML(t) + linksHTML(t) + depsHTML(t) +
+      '<div class="c-seg">' +
+        ['not_started:Not started', 'in_progress:In progress', 'done:Done', 'na:N/A'].map(o => {
+          const [k, lbl] = o.split(':');
+          return '<button data-set="' + k + ':' + t.id + '" aria-pressed="' + (state[t.id] === k) + '">' + lbl + '</button>';
+        }).join('') +
+      '</div></article>';
+  });
+  return h + '</main></div></div>';
+}
+
+
+/* ============================ VARIANT D ============================ */
+/* C, plus: cards collapse to a 2-line snippet and open a slide-out (bottom
+   sheet on mobile); tasks auto-sort by status within the phase. */
+const SORT_ORDER = { in_progress: 0, not_started: 1, done: 2, na: 3 };
+const GROUP_LABEL = { not_started: 'To do', in_progress: 'In progress', done: 'Done', na: 'Not applicable' };
+let drawerId = null;
+let movedId = null;   // card that just changed group, for the landing flash
+let drawerWasOpen = false;
+
+function sortedPhaseTasks(p) {
+  return phaseTasks(p)
+    .map((t, i) => [t, i])
+    .sort((a, b) => (SORT_ORDER[state[a[0].id]] - SORT_ORDER[state[b[0].id]]) || (a[1] - b[1]))
+    .map(x => x[0]);
+}
+
+function VariantD() {
+  const p = DATA.phases[currentPhase];
+  const ts = sortedPhaseTasks(p), c = countable(phaseTasks(p)), d = doneCount(c);
+  const tt = totals();
+  let h = appbar() + '<div class="wrap"><div class="c-grid"><nav class="c-rail">';
+  DATA.phases.forEach((ph, i) => {
+    const pc = countable(phaseTasks(ph)), pd = doneCount(pc);
+    const cls = pd === pc.length ? 'done' : i === currentPhase ? 'current' : '';
+    h += '<button class="c-station ' + cls + '" data-goto="' + i + '">' +
+      '<span class="mark">' + (pd === pc.length ? CHECK : phaseNum(ph)) + '</span>' +
+      '<span class="nm">' + esc(shortPhase(ph)) + '<span class="sub">' + pd + '/' + pc.length + '</span></span></button>';
+  });
+  h += '</nav><main>';
+  h += '<div class="c-head"><p class="muted" style="font-size:.8125rem;text-transform:uppercase;letter-spacing:.06em">Phase ' + phaseNum(p) + ' of 11</p>' +
+       '<h1>' + esc(shortPhase(p)) + '</h1>' +
+       '<p class="muted">' + d + ' of ' + c.length + ' done here &middot; ' + tt.done + ' of ' + tt.total + ' overall</p></div>';
+  if (d === c.length && c.length) h += '<div class="c-done-banner"><strong>Phase complete.</strong> That is ' + tt.done + ' tasks behind you. Next: ' + esc(shortPhase(DATA.phases[Math.min(currentPhase + 1, 10)])) + '.</div>';
+
+  let group = null;
+  ts.forEach(t => {
+    if (state[t.id] !== group) { group = state[t.id]; h += '<p class="d-cap">' + GROUP_LABEL[group] + '</p>'; }
+    const u = unmetDeps(t);
+    h += '<div class="d-card ' + state[t.id] + (t.id === movedId ? ' moved' : '') + '" role="button" tabindex="0" data-drawer="' + t.id + '">' +
+      dotHTML(t.id) +
+      '<div class="grow"><h3>' + esc(t.title) + '</h3>' +
+      '<p class="d-snip">' + esc(t.body) + '</p>' +
+      '<div class="d-meta">' +
+        (t.state_specific ? '<span class="pill pill-state">Varies by state</span>' : '') +
+        (t.links.length ? '<span>' + t.links.length + ' link' + (t.links.length > 1 ? 's' : '') + '</span>' : '') +
+        (u.length ? '<span>Usually comes after ' + esc(u[0].title) + (u.length > 1 ? ' +' + (u.length - 1) : '') + '</span>' : '') +
+      '</div></div><span class="d-chev">&#8250;</span></div>';
+  });
+  h += '</main></div></div>' + drawerHTML();
+  return h;
+}
+
+function drawerHTML() {
+  if (!drawerId) return '';
+  const t = byId[drawerId];
+  const cls = drawerWasOpen ? ' open' : '';
+  return '<div class="scrim' + cls + '" data-close="1"></div>' +
+    '<aside class="drawer' + cls + '" role="dialog" aria-modal="true" aria-label="' + esc(t.title) + '">' +
+      '<div class="grip"></div>' +
+      '<div class="dhead"><span class="kick">' + esc(shortPhase(t.phase)) + '</span><h2>' + esc(t.title) + '</h2>' +
+        '<button class="close" data-close="1" aria-label="Close">&times;</button></div>' +
+      '<div class="dbody">' +
+        '<div class="body-text">' + esc(t.body) + '</div>' +
+        stateLineHTML(t) +
+        (t.links.length ? '<span class="cmp">Link treatment 1 &mdash; pills</span>' + linksHTML(t) +
+                          '<span class="cmp">Link treatment 2 &mdash; list with source</span>' + linkListHTML(t) : '') +
+        depsHTML(t) +
+        '<textarea class="notefield" placeholder="Private notes for your practice&hellip;" data-note="' + t.id + '">' + esc(notes[t.id] || '') + '</textarea>' +
+        '<p style="margin-top:var(--space-4);font-size:.875rem;color:var(--gray-500)">Target date <input class="datefield" type="date" style="margin-left:var(--space-2)"></p>' +
+      '</div>' +
+      '<div class="dfoot"><div class="c-seg">' +
+        ['not_started:Not started', 'in_progress:In progress', 'done:Done', 'na:N/A'].map(o => {
+          const [k, lbl] = o.split(':');
+          return '<button data-set="' + k + ':' + t.id + '" aria-pressed="' + (state[t.id] === k) + '">' + lbl + '</button>';
+        }).join('') +
+      '</div></div>' +
+    '</aside>';
+}
+
+
+function linkListHTML(t) {
+  if (!t.links.length) return '';
+  return '<div class="linklist">' + t.links.map(l => {
+    let host = '';
+    try { host = new URL(l.url).hostname.replace('www.', ''); } catch (e) { host = 'no link set'; }
+    const kind = /\.pdf($|\?)/i.test(l.url) ? ' &middot; PDF' : '';
+    return '<a href="' + esc(l.url) + '" target="_blank" rel="noreferrer">' +
+      '<span class="lt"><strong>' + esc(l.label) + '</strong><span>' + esc(host) + kind + '</span></span>' +
+      '<span class="arrow">&#8599;</span></a>';
+  }).join('') + '</div>';
+}
+
+function openDrawer(id) { drawerId = id; drawerWasOpen = false; document.body.style.overflow = 'hidden'; render(); }
+function closeDrawer() { drawerId = null; drawerWasOpen = false; document.body.style.overflow = ''; render(); }
+
+/* ============================ switcher + wiring ============================ */
+function renderSwitcher() {
+  const keys = Object.keys(VARIANTS);
+  const el = document.getElementById('switcher');
+  el.hidden = false;
+  el.innerHTML = '<button data-step="-1">&#8592;</button>' +
+    '<span class="lbl">' + variant + ' &mdash; ' + VARIANTS[variant] + '</span>' +
+    '<button data-step="1">&#8594;</button>';
+  el.querySelectorAll('[data-step]').forEach(b => b.onclick = () => {
+    const i = keys.indexOf(variant);
+    go(keys[(i + Number(b.dataset.step) + keys.length) % keys.length]);
+  });
+}
+function go(v) {
+  variant = v;
+  const u = new URL(location.href);
+  u.searchParams.set('variant', v);
+  history.replaceState(null, '', u);
+  render();
+}
+function render() {
+  const scroll = window.scrollY;
+  const render_fn = { A: VariantA, B: VariantB, C: VariantC, D: VariantD }[variant];
+  document.getElementById('app').innerHTML = render_fn();
+  if (drawerId && !drawerWasOpen) {
+    requestAnimationFrame(() => {
+      document.querySelectorAll('.drawer, .scrim').forEach(el => el.classList.add('open'));
+      drawerWasOpen = true;
+    });
+  }
+  renderSwitcher();
+  window.scrollTo(0, scroll);
+}
+document.addEventListener('click', e => {
+  const t = e.target.closest('[data-cycle],[data-open],[data-phase],[data-set],[data-focus],[data-goto],[data-index],[data-drawer],[data-close]');
+  if (!t) return;
+  const d = t.dataset;
+  if (d.cycle) { e.stopPropagation(); return cycle(Number(d.cycle)); }
+  if (d.close) return closeDrawer();
+  if (d.drawer) return openDrawer(Number(d.drawer));
+  if (d.open) { const id = Number(d.open); open.has(id) ? open.delete(id) : open.add(id); return render(); }
+  if (d.phase) { const p = d.phase; collapsedPhases.has(p) ? (collapsedPhases.delete(p), collapsedPhases.add('!' + p)) : collapsedPhases.add(p); return render(); }
+  if (d.set) { const [s, id] = d.set.split(':'); return setState(Number(id), s); }
+  if (d.focus) { focusId = Number(d.focus); return render(); }
+  if (d.goto) { currentPhase = Number(d.goto); return render(); }
+  if (d.index) { indexOpen = !indexOpen; return render(); }
+});
+document.addEventListener('input', e => { if (e.target.dataset.note) notes[e.target.dataset.note] = e.target.value; });
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && drawerId) return closeDrawer();
+  if ((e.key === 'Enter' || e.key === ' ') && e.target.dataset && e.target.dataset.drawer) {
+    e.preventDefault(); return openDrawer(Number(e.target.dataset.drawer));
+  }
+  if (/^(INPUT|TEXTAREA)$/.test(e.target.tagName) || e.target.isContentEditable) return;
+  if (drawerId) return;
+  const keys = Object.keys(VARIANTS), i = keys.indexOf(variant);
+  if (e.key === 'ArrowLeft') go(keys[(i - 1 + keys.length) % keys.length]);
+  if (e.key === 'ArrowRight') go(keys[(i + 1) % keys.length]);
+});
+render();
+</script>
+</body>
+</html>
