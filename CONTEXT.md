@@ -123,8 +123,20 @@ _Avoid_: Onboarding answers, preferences, settings
 ### Consent
 
 **Email Consent**:
-A User's permission to be sent occasional non-transactional email. Asked once, at registration, as a checkbox that is ticked by default and never a condition of using the product — Launch Tasks is free and stays usable whether or not it is given.
+A User's permission to be sent occasional non-transactional email. Asked at registration as a checkbox ticked by default, and grantable later from settings by a User who declined — never a condition of using the product, since Launch Tasks is free and stays usable whether or not it is given. Consent is **append-only**: the app can record that it was given, never that it was withdrawn. It is therefore a record of an act, not a statement of current state — a User who consented and later used an email's unsubscribe link still has Email Consent recorded, and the app does not know.
 _Avoid_: Subscription (that is Kit's word for its own state), opt-in, marketing permission
+
+**Cancelled**:
+Kit's word, used unchanged, for a subscriber who has unsubscribed. Kit treats it as permanent and consent-revoking, and so does Launch Tasks: once Kit reports a subscriber Cancelled, the app writes nothing further about them — not the subscriber, not the tag, not the Practice State field. Only the physician can leave this state, through a Kit-hosted resubscribe form that the app links to and does not operate.
+_Avoid_: Unsubscribed (fine in prose, but the value the API returns is `cancelled`, and code should match it), opted out, bounced (a different Kit state entirely)
+
+**Suppressed**:
+What the app records locally when a Kit Sync Job discovers the address it was about to write to is Cancelled. It exists so settings can explain the refusal without calling Kit, and it is a cached observation rather than a verdict: the next Subscribe press re-reads Kit and clears it if the physician has resubscribed in the meantime.
+_Avoid_: Blocked, banned, blacklisted — nothing punitive happened; the physician asked
+
+**Kit Sync Job**:
+A queued unit of work that writes one fact about one User to Kit. Never runs inside a request, never blocks registration, and always reads Kit's subscription state before it writes.
+_Avoid_: Sync, webhook (there are none), Kit integration
 
 **Consent Wording**:
 The exact sentence a User agreed to, identified by a version. The wording is versioned and never rewritten in place, so an old version always means what it meant.

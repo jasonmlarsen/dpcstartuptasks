@@ -23,3 +23,4 @@ dist/
 # carry live account data. The findings belong in the ticket, not in git.
 .scratch/launch-tasks/kit-provisioning-raw/
 .scratch/launch-tasks/kit-provisioning-answers.env
+.scratch/launch-tasks/kit-unsubscribe-probe-raw/
