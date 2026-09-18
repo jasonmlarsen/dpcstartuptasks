@@ -134,6 +134,10 @@ _Avoid_: Unsubscribed (fine in prose, but the value the API returns is `cancelle
 What the app records locally when a Kit Sync Job discovers the address it was about to write to is Cancelled. It exists so settings can explain the refusal without calling Kit, and it is a cached observation rather than a verdict: the next Subscribe press re-reads Kit and clears it if the physician has resubscribed in the meantime.
 _Avoid_: Blocked, banned, blacklisted — nothing punitive happened; the physician asked
 
+**Resubscribe Form**:
+The Kit-hosted form at `https://directcaretools.kit.com/resubscribe` (form id `9934917`, uid `263b30720e`) — the only way a Cancelled subscriber becomes active again, and the only part of the consent flow Launch Tasks does not own. The app links to it and never operates it: `state` is create-only on Kit's API, so there is no write that resurrects anyone. Its double opt-in stays on deliberately, because the confirmation email *is* the explicit permission Kit requires. Verified live: a Cancelled subscriber that completes it returns to `active` with `canceled_at` cleared, keeping both its subscriber id and its Practice State.
+_Avoid_: Re-signup form, opt-in form, the Kit form (there are five; this is the only one Launch Tasks links to)
+
 **Kit Sync Job**:
 A queued unit of work that writes one fact about one User to Kit. Never runs inside a request, never blocks registration, and always reads Kit's subscription state before it writes.
 _Avoid_: Sync, webhook (there are none), Kit integration
