@@ -19,8 +19,12 @@ Someone with access to a Practice's task list who is not the Owner. Up to two pe
 _Avoid_: Collaborator, team member, user
 
 **Admin**:
-The operator of the whole product, who edits the Task Library for every Practice. Not a role within a Practice.
+The operator of the whole product, who edits the Task Library for every Practice and can enter a Practice through Support View. Not a role within a Practice.
 _Avoid_: Superuser, staff
+
+**Support View**:
+The Admin looking at a Practice exactly as its Owner sees it, in order to help them. Shows everything the Owner can see, including Notes, and can act as they would. Always announced by a banner for as long as it lasts.
+_Avoid_: Impersonation (what the library calls it, not what it is for), god mode, sudo, shadowing
 
 **Membership**:
 The link between a User and the one Practice they belong to, carrying their role of Owner or Member. A User belongs to exactly one Practice.
@@ -53,7 +57,7 @@ _Avoid_: Stage, section, category, milestone
 
 **Body**:
 The help text on a Task, authored in Markdown. Since no other descriptive field survives, the Body *is* the value of a Task.
-_Avoid_: Notes (that word means the Practice's private writing), description, details
+_Avoid_: Note (that word means the Practice's own writing on a Task), description, details
 
 **Helpful Link**:
 A curated, labelled link on a Global Task. The label is always present and is what a physician reads; a bare URL is a bug.
@@ -72,12 +76,12 @@ Where a Practice has got to on one Task: not started, in progress, done, or not 
 A Status meaning this Task will never apply to this Practice. Collapses out of the main view and stops counting against progress — the state that makes the list feel achievable rather than accusatory.
 _Avoid_: N/A as a stored value, skipped, dismissed, hidden
 
-**Private Note**:
-A Practice's own writing on a Task. Never visible to the Admin or to other Practices, and never authored in raw HTML.
-_Avoid_: Comment, annotation
+**Note**:
+A Practice's own writing on a Task, shared with its Members. Never visible to another Practice, and never authored in raw HTML. Visible to the Admin in Support View — the word *private* was dropped on purpose when that was decided, rather than left standing as a promise the product no longer keeps.
+_Avoid_: Private Note, Custom Note (*Custom* means authored by a Practice rather than the Admin, and there is no Admin-authored note for it to contrast with), comment, annotation
 
 **Task Entry**:
-A Practice's row for one Task, carrying its Status, Private Note and target date. Exists for every Task from the moment a Practice is created, not only once the Practice has touched it — so "no Entry" never means anything.
+A Practice's row for one Task, carrying its Status, Note and target date. Exists for every Task from the moment a Practice is created, not only once the Practice has touched it — so "no Entry" never means anything.
 _Avoid_: Override (it is not only present when something changed), progress record, task instance
 
 **Override**:
@@ -89,8 +93,16 @@ A Global Task published after a Practice already existed, flagged to that Practi
 _Avoid_: Unread, unseen, updated
 
 **Retired**:
-A Global Task the Admin has withdrawn from the Task Library. Never deleted, because Practices have Task Entries against it and may already have done the work.
+A Global Task the Admin has withdrawn from the Task Library. Never deleted, because Practices have Task Entries against it and may already have done the work. It disappears for Practices that never touched it, and stays — marked, and no longer counting either way towards progress — for Practices that did. A Practice is never Retired; a Practice is deleted, then purged.
 _Avoid_: Deleted, archived, disabled
+
+**Draft**:
+A Global Task the Admin is still writing. Exists only in the admin panel: no Practice has a Task Entry for it, so it is not merely hidden — it is not yet part of anyone's list.
+_Avoid_: Unpublished, hidden, private, work in progress
+
+**Published**:
+A Global Task released into the Task Library, which is the moment every Practice gains a Task Entry for it. Publishing is a deliberate act; editing an already-published Task is not, and reaches Practices on save.
+_Avoid_: Live, released, active
 
 ### Consent
 
