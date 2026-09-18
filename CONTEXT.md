@@ -67,6 +67,14 @@ _Avoid_: Resource, reference, URL
 A statement that one Task usually comes after another. Advice, never enforcement — nothing in the product is ever locked.
 _Avoid_: Prerequisite, blocker, gate
 
+**Seed**:
+The one-time load of the Task Library into an empty database, from the cleaned starter CSV. The original spreadsheet is a record, not a source: once a database has been seeded, everything after that is the Admin's editing. Seeding never deletes anything, so a database that already holds Tasks is simply refused.
+_Avoid_: Upload, import, reset (the product has no power to clear a database; a person discards a file and seeds a fresh one)
+
+**Seed Script**:
+The command-line tool that performs a Seed. Knows only about Phases, Tasks and Helpful Links — it cannot create a Practice, a User or a Membership, which is what makes it safe to point at a production database. Dummy accounts for development come from a separate tool that goes through registration and invites like anyone else.
+_Avoid_: Importer, migration (migrations change shape, a Seed adds content)
+
 ### A Practice's own work
 
 **Status**:
