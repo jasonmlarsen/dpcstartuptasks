@@ -23,7 +23,7 @@ The operator of the whole product, who edits the Task Library for every Practice
 _Avoid_: Superuser, staff
 
 **Support View**:
-The Admin looking at a Practice exactly as its Owner sees it, in order to help them. Shows everything the Owner can see, including Notes, and can act as they would. Always announced by a banner for as long as it lasts. Only ever aimed at an Owner, never at a Member. It ends when the Admin stops it, when its hour runs out, or the instant the Owner's own access ends — deleting a Practice takes the Admin's view of it away too, and a Practice in its Grace Period cannot be entered at all.
+The Admin looking at a Practice exactly as its Owner sees it, in order to help them. Shows everything the Owner can see, including Notes, and can act as they would. Always announced by a banner for as long as it lasts. Only ever aimed at an Owner, never at a Member. The Send feedback item is hidden for its duration, so the Admin can never file a Feedback in the Owner's name. It ends when the Admin stops it, when its hour runs out, or the instant the Owner's own access ends — deleting a Practice takes the Admin's view of it away too, and a Practice in its Grace Period cannot be entered at all.
 _Avoid_: Impersonation (what the library calls it, not what it is for), god mode, sudo, shadowing
 
 **Membership**:
@@ -129,6 +129,16 @@ _Avoid_: Onboarding (it happens after the account exists and is not required), s
 **Practice Profile**:
 What a Practice told the Tailoring Wizard: its state, whether it sees patients at a fixed location, and whether it expects employees. Kept after the Wizard has done its work, for wording and for segmenting email — never re-applied to Tasks published later.
 _Avoid_: Onboarding answers, preferences, settings
+
+### Feedback
+
+**Feedback**:
+One thing a physician told the Admin was wrong, sent from a text box reachable on every page. It is a message, not a case: it carries the text, the page it was sent from and the Task the physician was looking at, and it has exactly two states — **New** until the Admin has finished with it, then **Done**, optionally with a one-line note recording what changed or why nothing did. There is no reply in the product; the Admin has the address and writes back by hand if it is worth it. A Feedback is never deleted and never expires — only a Purge destroys one, along with everything else its Practice wrote.
+_Avoid_: Ticket, support request, report, issue, bug — each promises a system that is not being built
+
+**Feedback Digest**:
+The once-daily email listing the Feedback that arrived since the last one, sent to the Admin's own address and never sent empty. It is what makes the thirty-day Grace Period a real window rather than a hope that someone remembers to open a page, which is why removing it would quietly change what Purge costs.
+_Avoid_: Notification, alert, summary email
 
 ### Consent
 
