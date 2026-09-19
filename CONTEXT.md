@@ -18,6 +18,14 @@ _Avoid_: Admin (that word is taken), co-owner, primary user
 Someone with access to a Practice's task list who is not the Owner. Up to two per Practice. Can do anything on the list itself.
 _Avoid_: Collaborator, team member, user
 
+**Display Name**:
+How a person's name appears to the other people on their Practice. One free-text field, optional, and never verified — the email address stands in wherever it is unset.
+_Avoid_: Full name, first/last name, title, profile
+
+**Invite**:
+An Owner's offer of one of a Practice's three places, sent to an email address. It carries no authority of its own: accepting it is a separate sign-in.
+_Avoid_: Invitation link, seat, request
+
 **Admin**:
 The operator of the whole product, who edits the Task Library for every Practice. Not a role within a Practice.
 _Avoid_: Superuser, staff
@@ -61,13 +69,23 @@ _Avoid_: Prerequisite, blocker, gate
 Where a Practice has got to on one Task: not started, in progress, done, or not applicable.
 
 **Not Applicable**:
-A Status meaning this Task will never apply to this Practice. Collapses out of the main view and stops counting against progress — the state that makes the list feel achievable rather than accusatory.
+A Status meaning this Task will never apply to this Practice. Stops counting against progress — the state that makes the list feel achievable rather than accusatory. Such Tasks sink to the bottom of their Phase and dim to their title alone; they never disappear, so a physician can always confirm what was set aside and undo it.
 _Avoid_: N/A as a stored value, skipped, dismissed, hidden
 
 **Private Note**:
 A Practice's own writing on a Task. Never visible to the Admin or to other Practices, and never authored in raw HTML.
 _Avoid_: Comment, annotation
 
+**Task Entry**:
+A Practice's own row for one Global Task, holding its Status, Private Note and target date. One exists for every Global Task from the day the Practice is created, so the absence of a row never means anything.
+_Avoid_: Task state, progress record
+
 **Override**:
-The per-Practice layer on top of a Global Task: Status, Private Note, target date, ordering. A Practice may never rename or rewrite a Global Task's Body.
+The concept of the Practice-owned layer on top of a Global Task — what a Task Entry holds. A Practice may never rename or rewrite a Global Task's Body.
 _Avoid_: Customization, edit, fork
+
+### Talking to the Admin
+
+**Feedback**:
+A message a physician sends the Admin from anywhere in the app — a wrong instruction, a dead link, a request. Carries the page it was sent from, and the Task if there was one. It is read on the admin page, not answered in the app.
+_Avoid_: Ticket, support request, bug report, issue
