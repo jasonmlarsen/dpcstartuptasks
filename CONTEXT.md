@@ -34,6 +34,16 @@ _Avoid_: Seat, role assignment, affiliation
 An Owner's outstanding offer of a Membership to an email address. Counts against the Practice's three-person cap while it is pending, so acceptance can never breach the cap.
 _Avoid_: Invitation link, request, pending user
 
+### Signing in
+
+**Sign-in Link**:
+The single-use link emailed to a User to let them in. The only way into the product — there is no password, so a Sign-in Link that fails is not a degraded experience but a locked door. It lives for ten minutes, works once, and is used up by pressing Continue on the Continue Screen, never by being fetched. Every request for one is answered the same way whoever asked and whatever address they typed, because the answer is the only place an address could ever leak.
+_Avoid_: Magic link (the library's word, and no physician's), login link, token, one-time password
+
+**Continue Screen**:
+The page a Sign-in Link opens, carrying a single Continue button and nothing else. It exists because corporate mail systems open links before their owner does, and a link that signed you in merely by being opened would already be spent by the time the physician clicked it. Opening it does nothing at all — it looks the same for a good link, an expired one and a forged one, and only pressing Continue finds out which it was.
+_Avoid_: Interstitial (what it is, not what it is for), confirmation page, verification page
+
 ### Content
 
 **Task Library**:
