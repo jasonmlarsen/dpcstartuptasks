@@ -41,20 +41,24 @@ npm run db:seed                                    # the default database
 npm run db:seed -- --database /data/launch-tasks.sqlite
 ```
 
-There is no flag for the CSV: a Seed loads the committed Task Library or it
-does not run. The script, the two modules it needs and the CSV all ship in the
-container, so the same command works against the volume on the VPS.
-
 The Seed Script loads the 98 Tasks and 11 Phases of
 [`docs/seed/task-library.csv`](./docs/seed/README.md) into an empty database,
-all Published. It **can only ever add**: there is no delete path and no update
-path, and it refuses outright when `global_task` already has rows — which is
-what makes it safe to point at production. It also knows only about Phases,
-Tasks and Helpful Links, so it cannot create a Practice, a User or a
-Membership.
+all Published. There is no flag for the CSV: a Seed loads the committed Task
+Library or it does not run.
 
-Discarding a database is `rm data/launch-tasks.sqlite`, typed on purpose. It is
-not a feature of the product, and there is no screen for any of this.
+It **can only ever add** — no delete path, no update path — and it refuses
+outright when `global_task` already has rows. It knows only about Phases,
+Tasks and Helpful Links, so it cannot create a Practice, a User or a
+Membership. Together those are what make it safe to point at a production
+database.
+
+**It runs from a checkout, never from inside the container.** The script is
+deliberately not in the production image: the dangerous capability lives
+outside the running app, where no bug can make it reachable. On the VPS that
+means a clone, `npm install`, and `--database` pointed at the Coolify
+volume's file — the same shape as every other operator act here. Promoting an
+Admin is a SQL statement typed on the VPS, and discarding a database is `rm
+data/launch-tasks.sqlite`, typed on purpose. There is no screen for any of it.
 
 ## Styling
 
