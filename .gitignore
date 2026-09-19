@@ -19,6 +19,9 @@ dist/
 .vscode/
 .idea/
 
+# Claude Code local state: machine-local settings and agent worktrees
+.claude/
+
 # Wizard run artifacts: raw Kit API responses and captured answers, which
 # carry live account data. The findings belong in the ticket, not in git.
 .scratch/launch-tasks/kit-provisioning-raw/
