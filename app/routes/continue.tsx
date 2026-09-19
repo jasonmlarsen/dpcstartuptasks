@@ -2,6 +2,7 @@ import { data, Form, Link, redirect } from "react-router";
 
 import { isSameOrigin } from "~/auth/origin";
 import { continueFromSignInLink } from "~/auth/server";
+import { registerPractice } from "~/practice/registration";
 import { getServices } from "~/services/services";
 import type { Route } from "./+types/continue";
 
@@ -51,6 +52,12 @@ export async function action({ context, request }: Route.ActionArgs) {
     // used, expired, forged and never-existed are one outcome, not four.
     throw redirect("/sign-in?link=failed");
   }
+
+  // The first Continue an address ever presses is also its registration: this
+  // is where the Practice, the Owner Membership and ninety-eight Task Entries
+  // come into being. Run on every successful sign-in, because what it reads is
+  // whether a Membership exists, and for everyone after the first it does.
+  registerPractice(services.database, outcome.user);
 
   // Better Auth set the session cookie on its own response headers; this is
   // where it is carried onto ours.

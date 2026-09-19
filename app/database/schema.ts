@@ -5,6 +5,7 @@ import {
   primaryKey,
   sqliteTable,
   text,
+  uniqueIndex,
 } from "drizzle-orm/sqlite-core";
 
 /**
@@ -110,6 +111,14 @@ export const taskDependency = sqliteTable(
  * column names underneath are ours, in the snake_case the rest of this file
  * uses. Only `app/auth/server.ts` ever reads or writes these tables
  * (ADR-0004); nothing else in the app should import them.
+ *
+ * With one carve-out, named here rather than discovered: the two Email Consent
+ * columns on `user` are **ours**, not Better Auth's, and `app/consent` writes
+ * them. They live on this table because a User is who consented and there is
+ * nothing else for them to hang off — which is a fact about the data model and
+ * not a crack in the module boundary. The boundary is about the library: no
+ * file outside `app/auth/server.ts` imports `better-auth`, and
+ * `test/auth-module.test.ts` is what keeps that true.
  */
 export const user = sqliteTable("user", {
   id: text("id").primaryKey(),
@@ -122,6 +131,23 @@ export const user = sqliteTable("user", {
   image: text("image"),
   createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
   updatedAt: integer("updated_at", { mode: "timestamp" }).notNull(),
+
+  /**
+   * Email Consent, which is an act and never a state: when it was granted and
+   * which Consent Wording was agreed to. Null means it was never granted —
+   * everyone is asked exactly once, at registration, so null is unambiguous.
+   *
+   * There is deliberately no `email_consent_revoked_at`. Consent is
+   * append-only: unsubscribing happens in Kit, through the footer of an email,
+   * and a revocation column here would only rot out of sync with the place
+   * that actually knows. These two columns live on `user` rather than in the
+   * auth module's world, but Better Auth owns the table, so they are declared
+   * here with the rest of it.
+   */
+  emailConsentGrantedAt: integer("email_consent_granted_at", {
+    mode: "timestamp",
+  }),
+  emailConsentVersion: text("email_consent_version"),
 });
 
 export const session = sqliteTable("session", {
@@ -226,5 +252,165 @@ export const continueAttempt = sqliteTable(
   },
   (table) => [
     index("continue_attempt_ip_idx").on(table.ipAddress, table.attemptedAt),
+  ],
+);
+
+/**
+ * A Practice: one clinic and its shared task list, and the unit of tenancy.
+ *
+ * It has no name when it is created, because registration asks for nothing but
+ * an email address — the Owner names it later from settings, and a Practice
+ * that was never named is not a broken one.
+ */
+export const practice = sqliteTable("practice", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  /** Null until the Owner names it. Never shown as a blank line. */
+  name: text("name"),
+  createdAt: integer("created_at", { mode: "timestamp" })
+    .notNull()
+    .default(sql`(unixepoch())`),
+});
+
+/**
+ * A Membership: the link between a User and the one Practice they belong to.
+ *
+ * `user_id` is UNIQUE, and that index is the whole of *one Practice per User*
+ * — going multi-practice later is dropping it. A partial unique index keeps
+ * exactly one Owner per Practice, because `role` is the only thing separating
+ * the member who can delete everything from the two who cannot.
+ */
+export const membership = sqliteTable(
+  "membership",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    practiceId: integer("practice_id")
+      .notNull()
+      .references(() => practice.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .unique()
+      .references(() => user.id, { onDelete: "cascade" }),
+    role: text("role", { enum: ["owner", "member"] }).notNull(),
+    createdAt: integer("created_at", { mode: "timestamp" })
+      .notNull()
+      .default(sql`(unixepoch())`),
+  },
+  (table) => [
+    index("membership_practice_idx").on(table.practiceId),
+    uniqueIndex("membership_one_owner_idx")
+      .on(table.practiceId)
+      .where(sql`${table.role} = 'owner'`),
+  ],
+);
+
+/** Where a Practice has got to on one Task. Stored as text, never as `N/A`. */
+export const TASK_STATUSES = [
+  "not_started",
+  "in_progress",
+  "done",
+  "not_applicable",
+] as const;
+
+export type TaskStatus = (typeof TASK_STATUSES)[number];
+
+/**
+ * A Custom Task: a Task a Practice created for itself.
+ *
+ * Separate from `global_task` (ADR-0003) and deliberately lighter: no Helpful
+ * Links, no Dependencies, no state flag — those are editorial acts, and a
+ * physician is not an editor. It carries its own Status rather than a Task
+ * Entry, because it already belongs to exactly one Practice.
+ *
+ * No `position`: within a Phase, Custom Tasks order by `created_at` behind the
+ * Global Tasks, since a manual order cannot coexist with live auto-sort.
+ */
+export const customTask = sqliteTable(
+  "custom_task",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    practiceId: integer("practice_id")
+      .notNull()
+      .references(() => practice.id, { onDelete: "cascade" }),
+    phaseId: integer("phase_id")
+      .notNull()
+      .references(() => phase.id),
+    title: text("title").notNull(),
+    body: text("body").notNull().default(""),
+    status: text("status", { enum: TASK_STATUSES }).notNull().default("not_started"),
+    createdAt: integer("created_at", { mode: "timestamp" })
+      .notNull()
+      .default(sql`(unixepoch())`),
+  },
+  (table) => [index("custom_task_practice_idx").on(table.practiceId)],
+);
+
+/**
+ * A Task Entry: a Practice's row for one Global Task.
+ *
+ * Eager (ADR-0003). One row per Published Global Task exists from the moment
+ * the Practice is created, so the absence of an Entry never means anything and
+ * code defending against a missing one is a symptom of a backfill bug.
+ *
+ * `announced_at` is written only when an Entry is created for a Practice that
+ * already existed — Tasks present at creation are never Newly Added, which is
+ * why a brand-new Practice does not open to ninety-eight New pills.
+ */
+export const taskEntry = sqliteTable(
+  "task_entry",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    practiceId: integer("practice_id")
+      .notNull()
+      .references(() => practice.id, { onDelete: "cascade" }),
+    globalTaskId: integer("global_task_id")
+      .notNull()
+      .references(() => globalTask.id),
+    status: text("status", { enum: TASK_STATUSES }).notNull().default("not_started"),
+    /** The Practice's own writing, belonging to the Practice and not its author. */
+    note: text("note"),
+    targetDate: integer("target_date", { mode: "timestamp" }),
+    /** Newly Added is `announced_at IS NOT NULL AND acknowledged_at IS NULL`. */
+    announcedAt: integer("announced_at", { mode: "timestamp" }),
+    acknowledgedAt: integer("acknowledged_at", { mode: "timestamp" }),
+    createdAt: integer("created_at", { mode: "timestamp" })
+      .notNull()
+      .default(sql`(unixepoch())`),
+  },
+  (table) => [
+    uniqueIndex("task_entry_practice_task_idx").on(
+      table.practiceId,
+      table.globalTaskId,
+    ),
+  ],
+);
+
+/**
+ * An Email Consent granted on the registration form, waiting for the account
+ * it belongs to.
+ *
+ * The registration form *is* the sign-in form, and at the moment it is posted
+ * there is no User to write the consent onto — the User arrives when Continue
+ * is pressed, possibly on another device. This table carries the act across
+ * that gap and nothing else: the row is consumed when the User is first
+ * created, and a row older than a Sign-in Link is ignored and dropped.
+ *
+ * The address is a SHA-256 digest, for the same reason as
+ * `sign_in_link_request`: anyone at all can type an address into that form, so
+ * neither table may become a record of who was asked about. Nothing reads
+ * either one to decide what to answer a visitor.
+ */
+export const pendingEmailConsent = sqliteTable(
+  "pending_email_consent",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    /** SHA-256 of the lowercased, trimmed address. */
+    emailDigest: text("email_digest").notNull(),
+    /** The Consent Wording agreed to, which is never rewritten in place. */
+    version: text("version").notNull(),
+    /** The moment the box was submitted, carried onto the User unchanged. */
+    grantedAt: integer("granted_at", { mode: "timestamp" }).notNull(),
+  },
+  (table) => [
+    index("pending_email_consent_digest_idx").on(table.emailDigest),
   ],
 );

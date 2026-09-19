@@ -1,10 +1,9 @@
-import { createHash } from "node:crypto";
-
 import { and, count, eq, gt, lt } from "drizzle-orm";
 import type { SQLiteColumn, SQLiteTable } from "drizzle-orm/sqlite-core";
 
 import type { AppDatabase } from "~/database/database";
 import { continueAttempt, signInLinkRequest } from "~/database/schema";
+import { emailDigest } from "~/lib/email-digest";
 
 /**
  * Rate limiting is ours, on two axes, with two different behaviours
@@ -48,11 +47,11 @@ export function allowSignInLinkRequest(
   email: string,
   now: Date = new Date(),
 ): boolean {
-  const emailDigest = digestOf(email);
+  const digest = emailDigest(email);
 
   // Both windows have to hold, and the longer one is checked first so that a
   // day's worth of requests is not reset by fifteen quiet minutes.
-  return recordIfUnder(database, sendLeg(emailDigest), now, [
+  return recordIfUnder(database, sendLeg(digest), now, [
     { limit: LONG_WINDOW_LIMIT, milliseconds: LONG_WINDOW_HOURS * HOUR },
     { limit: SHORT_WINDOW_LIMIT, milliseconds: SHORT_WINDOW_MINUTES * MINUTE },
   ]);
@@ -91,13 +90,13 @@ interface Axis {
   row(at: Date): Record<string, unknown>;
 }
 
-function sendLeg(emailDigest: string): Axis {
+function sendLeg(digest: string): Axis {
   return {
-    key: emailDigest,
+    key: digest,
     subject: signInLinkRequest.emailDigest,
     at: signInLinkRequest.requestedAt,
     table: signInLinkRequest,
-    row: (requestedAt) => ({ emailDigest, requestedAt }),
+    row: (requestedAt) => ({ emailDigest: digest, requestedAt }),
   };
 }
 
@@ -159,9 +158,4 @@ function recordIfUnder(
   database.insert(axis.table).values(axis.row(now)).run();
 
   return true;
-}
-
-/** Addresses differ only by case and surrounding space as often as not. */
-function digestOf(email: string): string {
-  return createHash("sha256").update(email.trim().toLowerCase()).digest("hex");
 }

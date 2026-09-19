@@ -1,6 +1,7 @@
 import { Link } from "react-router";
 
 import { getSignedInUser } from "~/auth/server";
+import { practiceFor, taskListSize } from "~/practice/practice";
 import { getServices } from "~/services/services";
 import type { Route } from "./+types/home";
 
@@ -16,17 +17,34 @@ export function meta(_: Route.MetaArgs) {
 }
 
 export async function loader({ context, request }: Route.LoaderArgs) {
-  const signedInUser = await getSignedInUser(getServices(context), request);
-  return { email: signedInUser?.email ?? null };
+  const services = getServices(context);
+  const signedInUser = await getSignedInUser(services, request);
+  if (!signedInUser) return { email: null, practice: null };
+
+  // The Practice comes from the Membership of whoever is signed in, and from
+  // nothing the request carries. There is no id to tamper with here, which is
+  // not a check that passed — it is a shape in which the check is unnecessary.
+  const practice = practiceFor(services.database, signedInUser.id);
+  if (!practice) return { email: signedInUser.email, practice: null };
+
+  return {
+    email: signedInUser.email,
+    practice: {
+      name: practice.name,
+      ...taskListSize(services.database, practice),
+    },
+  };
 }
 
 /**
- * A placeholder, and deliberately little more. The real task list screen is a
- * later ticket; what it carries today is the one thing signing in is for —
- * saying who is signed in — so that the session a Sign-in Link mints is
- * visible from outside the auth module.
+ * A placeholder, and deliberately little more. The journey map is a later
+ * ticket; what this carries today is proof that registration did what it says
+ * — the physician's own Practice, and a list that already exists rather than
+ * one they have to start.
  */
 export default function Home({ loaderData }: Route.ComponentProps) {
+  const { email, practice } = loaderData;
+
   return (
     <main className="mx-auto max-w-2xl px-6 py-24">
       <h1 className="text-3xl font-bold text-gray-900">Launch Tasks</h1>
@@ -34,8 +52,8 @@ export default function Home({ loaderData }: Route.ComponentProps) {
         A task list for physicians opening a Direct Primary Care practice.
       </p>
 
-      {loaderData.email ? (
-        <p className="mt-8 text-gray-700">Signed in as {loaderData.email}.</p>
+      {email ? (
+        <p className="mt-8 text-gray-700">Signed in as {email}.</p>
       ) : (
         <p className="mt-8 text-gray-700">
           <Link to="/sign-in" className="underline">
@@ -43,6 +61,18 @@ export default function Home({ loaderData }: Route.ComponentProps) {
           </Link>{" "}
           to open your task list.
         </p>
+      )}
+
+      {practice && (
+        <>
+          <h2 className="mt-8 text-xl font-semibold text-gray-900">
+            {practice.name ?? "Your practice"}
+          </h2>
+          <p className="mt-2 text-gray-700">
+            {practice.tasks} tasks across {practice.phases} phases are waiting
+            on your list.
+          </p>
+        </>
       )}
 
       <p className="mt-8 text-sm text-gray-500">

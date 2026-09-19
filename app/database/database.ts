@@ -40,3 +40,19 @@ export function createDatabase(filePath: string) {
 
   return database;
 }
+
+/** The handle a `database.transaction(...)` callback is given. */
+export type AppTransaction = Parameters<
+  Parameters<AppDatabase["transaction"]>[0]
+>[0];
+
+/**
+ * A database, or a transaction on one.
+ *
+ * What most of the app actually needs: a thing that reads and writes rows. A
+ * function typed this way composes either way round — called on its own it
+ * runs in its own implicit transaction, and called from inside one it joins
+ * it, which is what lets registration create a Practice and claim a consent as
+ * a single act without either half knowing about the other.
+ */
+export type AppWriter = AppDatabase | AppTransaction;

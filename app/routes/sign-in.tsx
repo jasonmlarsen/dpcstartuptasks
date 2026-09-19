@@ -1,6 +1,10 @@
 import { Form, Link, redirect } from "react-router";
 
 import { requestSignInLink } from "~/auth/server";
+import {
+  EMAIL_CONSENT_WORDING,
+  recordEmailConsentChoice,
+} from "~/consent/email-consent";
 import { getServices } from "~/services/services";
 import type { Route } from "./+types/sign-in";
 
@@ -28,6 +32,9 @@ export async function action({ context, request }: Route.ActionArgs) {
   const services = getServices(context);
   const formData = await request.formData();
   const email = String(formData.get("email") ?? "").trim();
+  // An unticked checkbox is simply absent from what a browser submits, which
+  // is the whole of how a physician declines.
+  const emailConsent = formData.get("emailConsent") !== null;
 
   const outcome = await requestSignInLink(services, request, email);
 
@@ -38,6 +45,14 @@ export async function action({ context, request }: Route.ActionArgs) {
   if (outcome === "invalid-address") {
     return { unreadableAddress: true };
   }
+
+  // This form is also the registration form, so the answer to its checkbox has
+  // to survive until there is a User to write it onto — which happens on the
+  // Continue press, possibly on another device. It is recorded for every
+  // submission, ticked or not and known address or not: the answer this page
+  // gives back is the one place an address could ever leak, so nothing in
+  // front of it may behave differently for one.
+  recordEmailConsentChoice(services.database, email, emailConsent);
 
   return redirect("/check-your-email");
 }
@@ -72,6 +87,25 @@ export default function SignIn({ loaderData, actionData }: Route.ComponentProps)
             That does not look like an email address. Check it and try again.
           </p>
         )}
+
+        {/*
+          Ticked by default, and never a gate. Launch Tasks is free and stays
+          usable whether or not this is left ticked; declining costs a
+          physician nothing at all, here or afterwards.
+        */}
+        <label
+          htmlFor="emailConsent"
+          className="mt-6 flex items-start gap-3 text-sm text-gray-700"
+        >
+          <input
+            id="emailConsent"
+            name="emailConsent"
+            type="checkbox"
+            defaultChecked
+            className="mt-1 size-4 shrink-0 rounded border-gray-300"
+          />
+          <span>{EMAIL_CONSENT_WORDING}</span>
+        </label>
 
         <button
           type="submit"

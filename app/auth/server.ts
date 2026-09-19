@@ -94,7 +94,7 @@ export async function requestSignInLink(
  * in the forgery case.
  */
 export type ContinueOutcome =
-  | { status: "signed-in"; headers: Headers }
+  | { status: "signed-in"; headers: Headers; user: SignedInUser }
   | { status: "failed" }
   | { status: "too-many-attempts" };
 
@@ -127,7 +127,36 @@ export async function continueFromSignInLink(
   });
 
   if (!response.ok) return { status: "failed" };
-  return { status: "signed-in", headers: response.headers };
+
+  // Who was just let in, read back through the session that was minted rather
+  // than out of the verify response's body. The body's shape is the library's
+  // and undocumented at this call; the cookie is the thing the next request
+  // would arrive with anyway, so reading it is reading what happened.
+  const signedIn = await auth.api.getSession({
+    headers: new Headers({ Cookie: cookiePairs(response.headers) }),
+  });
+
+  if (!signedIn) {
+    // Unreachable unless a version bump changed what a successful verify
+    // leaves behind. Loudly, because the alternative is a physician landing on
+    // an empty page with no Practice and no idea why.
+    throw new Error("A Sign-in Link verified but minted no session.");
+  }
+
+  const { id, email, name } = signedIn.user;
+  return {
+    status: "signed-in",
+    headers: response.headers,
+    user: { id, email, name },
+  };
+}
+
+/** The `name=value` halves of every cookie a response is setting. */
+function cookiePairs(headers: Headers): string {
+  return headers
+    .getSetCookie()
+    .map((cookie) => cookie.split(";")[0])
+    .join("; ");
 }
 
 /** Who is signed in, or nobody. Read from the database on every request. */
