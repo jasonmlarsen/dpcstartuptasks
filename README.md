@@ -29,6 +29,19 @@ npm run build
 there is no separate setup step; `npm run db:generate` writes a new one after a
 schema change.
 
+### Configuration
+
+`APP_URL`, `AUTH_SECRET` and `TRUSTED_PROXIES` are **required in production**,
+and the app refuses to start without them rather than warning — sign-in is the
+only way in, so each one is a locked door rather than a degraded experience.
+In development all three have defaults and nothing needs setting.
+
+| Variable | What it is |
+| --- | --- |
+| `APP_URL` | Where the app answers, and what a Sign-in Link is addressed to. |
+| `AUTH_SECRET` | What session cookies are signed with. Changing it signs everyone out. |
+| `TRUSTED_PROXIES` | The reverse proxies in front of the app, as IPs or CIDR ranges, comma-separated. Unset behind a proxy, no client IP can be derived at all and the per-IP limit on Continue has to refuse every press. Behind Coolify this is the Traefik container's address on the app's Docker network — find it with `docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' coolify-proxy`. Use the proxy's own address, not a broad private range that would also cover a client. |
+
 `/health` is the uptime monitor's endpoint. It answers `LAUNCH_TASKS_OK` — the
 keyword UptimeRobot watches for — and it can only answer it by reading that
 string out of a real row in a real SQLite file. A database that cannot be
@@ -59,6 +72,18 @@ means a clone, `npm install`, and `--database` pointed at the Coolify
 volume's file — the same shape as every other operator act here. Promoting an
 Admin is a SQL statement typed on the VPS, and discarding a database is `rm
 data/launch-tasks.sqlite`, typed on purpose. There is no screen for any of it.
+
+## Signing in
+
+There is no password. A physician types an address, gets the same *check your
+email* page whatever they typed, and the email carries a link to a **Continue
+Screen** whose `GET` does nothing at all — corporate mail scanners open links
+before their owner does, and only pressing Continue spends the link. The whole
+path is plain forms at zero client JS.
+
+Better Auth lives entirely behind [`app/auth/server.ts`](./app/auth/server.ts),
+and nothing else in the app imports it. That module is the exit, not tidiness:
+see [ADR-0004](./docs/adr/0004-better-auth-behind-one-module.md).
 
 ## Styling
 

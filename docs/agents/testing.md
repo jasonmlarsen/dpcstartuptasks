@@ -123,6 +123,16 @@ than behaviour. The two rendering behaviours worth pinning — Not Applicable
 sinks and dims rather than vanishing, and `Varies by state` appears on the row —
 are seam 1 assertions, and the first is load-bearing for ADR-0002.
 
+## Not a seam: `test/auth-module.test.ts`
+
+Two of ADR-0004's rules cannot be observed through any of the four seams,
+because no request can reveal them: that **Better Auth stays behind one
+module**, and that a **misconfigured container refuses to start**. That file
+reads source files and calls the assertion directly. It is not a fifth seam
+and not a precedent for one — nothing in it asks the product to do anything.
+The bar for adding to it is the same: a rule an ADR rests on that no physician,
+Member or Admin could ever observe.
+
 ## What is not covered by tests, and is covered instead
 
 - **Kit's live behaviour.** Probed and recorded in the research files. The fake
