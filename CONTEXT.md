@@ -23,7 +23,7 @@ The operator of the whole product, who edits the Task Library for every Practice
 _Avoid_: Superuser, staff
 
 **Support View**:
-The Admin looking at a Practice exactly as its Owner sees it, in order to help them. Shows everything the Owner can see, including Notes, and can act as they would. Always announced by a banner for as long as it lasts.
+The Admin looking at a Practice exactly as its Owner sees it, in order to help them. Shows everything the Owner can see, including Notes, and can act as they would. Always announced by a banner for as long as it lasts. Only ever aimed at an Owner, never at a Member. It ends when the Admin stops it, when its hour runs out, or the instant the Owner's own access ends — deleting a Practice takes the Admin's view of it away too, and a Practice in its Grace Period cannot be entered at all.
 _Avoid_: Impersonation (what the library calls it, not what it is for), god mode, sudo, shadowing
 
 **Membership**:
