@@ -15,3 +15,7 @@ The five canonical triage labels, used unchanged: `needs-triage`, `needs-info`, 
 ### Domain docs
 
 Single-context: `CONTEXT.md` and `docs/adr/` at the repo root. See `docs/agents/domain.md`.
+
+### Testing
+
+Four seams, and no fifth: the request seam, the injected outbound clients, the worker, the Seed Script. The request seam is the default and everything else is justified against it. See `docs/agents/testing.md`.

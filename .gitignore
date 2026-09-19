@@ -30,3 +30,13 @@ dist/
 
 .scratch/launch-tasks/kit-resubscribe-form-raw/
 .scratch/launch-tasks/kit-resubscribe-form-answers.env
+
+# React Router build output and generated route types
+/.react-router/
+/build/
+
+# SQLite database files (the persistence layer lives on a volume, never in git)
+/data/
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal

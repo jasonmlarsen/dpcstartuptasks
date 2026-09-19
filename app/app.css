@@ -1,0 +1,131 @@
+/* Tailwind and shadcn first, the design tokens last, so the tokens win.
+   `styles/design-tokens.css` is the parent site's file and the source of
+   truth for colour and spacing (ADR-0005). It is imported, never copied, and
+   nothing below may redefine a name it already carries. */
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+@import "../styles/design-tokens.css";
+
+/* The tokens, as Tailwind utilities.
+
+   Only the names Tailwind does *not* already share with the tokens file
+   appear here. `--font-sans`, `--font-mono`, `--radius-*` and `--shadow-*`
+   are spelled identically in both, so the tokens file overrides Tailwind's
+   defaults by import order alone; re-declaring them here would make them
+   refer to themselves. */
+@theme {
+  --color-primary: var(--primary);
+  --color-primary-light: var(--primary-light);
+  --color-primary-dark: var(--primary-dark);
+  --color-secondary: var(--secondary);
+  --color-secondary-light: var(--secondary-light);
+  --color-secondary-dark: var(--secondary-dark);
+  --color-accent: var(--accent);
+  --color-accent-light: var(--accent-light);
+  --color-accent-dark: var(--accent-dark);
+
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-error: var(--error);
+
+  --color-white: var(--white);
+  --color-gray-50: var(--gray-50);
+  --color-gray-100: var(--gray-100);
+  --color-gray-200: var(--gray-200);
+  --color-gray-300: var(--gray-300);
+  --color-gray-400: var(--gray-400);
+  --color-gray-500: var(--gray-500);
+  --color-gray-600: var(--gray-600);
+  --color-gray-700: var(--gray-700);
+  --color-gray-800: var(--gray-800);
+  --color-gray-900: var(--gray-900);
+
+  /* Four slots, not five. The tokens file assigns them in fixed order and
+     never cycles, and deliberately stops at four; a fifth would be a colour
+     decision this file has no standing to make. */
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+
+  --spacing-1: var(--space-1);
+  --spacing-2: var(--space-2);
+  --spacing-3: var(--space-3);
+  --spacing-4: var(--space-4);
+  --spacing-5: var(--space-5);
+  --spacing-6: var(--space-6);
+  --spacing-8: var(--space-8);
+  --spacing-10: var(--space-10);
+  --spacing-12: var(--space-12);
+  --spacing-16: var(--space-16);
+  --spacing-20: var(--space-20);
+  --spacing-24: var(--space-24);
+}
+
+/* shadcn's semantic roles, every one of them resolved back to a token.
+
+   shadcn is installed for the four places accessibility is genuinely hard —
+   dialog, dropdown, date picker, toast — and plain markup is used everywhere
+   else (ADR-0005). What it ships is a neutral greyscale palette; what it gets
+   here is the tokens', so a dialog cannot drift away from the page it opens
+   over.
+
+   `--primary`, `--secondary` and `--accent` are not re-declared below: those
+   three names are shadcn's *and* the tokens', and the tokens win, which is
+   the whole point. A shadcn component reading `var(--accent)` therefore gets
+   the tokens' orange, not a pale grey. The first ticket to pull a dropdown in
+   should look at a hovered row and decide it reads well; if it does not, the
+   fix is the token, never a patch here.
+
+   There is no `.dark` block. The tokens file has no dark palette, and writing
+   one here would be inventing a second visual identity rather than following
+   the one that exists. */
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+}
+
+:root {
+  --background: var(--white);
+  --foreground: var(--gray-900);
+  --card: var(--white);
+  --card-foreground: var(--gray-900);
+  --popover: var(--white);
+  --popover-foreground: var(--gray-900);
+  --primary-foreground: var(--white);
+  --secondary-foreground: var(--white);
+  --accent-foreground: var(--white);
+  --muted: var(--gray-100);
+  --muted-foreground: var(--gray-500);
+  --destructive: var(--error);
+  --border: var(--gray-200);
+  --input: var(--gray-200);
+  --ring: var(--primary);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  html {
+    @apply font-sans;
+  }
+}
+
+/* `body` is deliberately absent: `styles/design-tokens.css` sets its colour,
+   background and line height in a plain rule, which outranks anything in
+   `@layer base`. That is the override working, not a gap. */
