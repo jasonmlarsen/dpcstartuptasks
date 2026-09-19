@@ -21,3 +21,12 @@ dist/
 
 # Claude Code local state: machine-local settings and agent worktrees
 .claude/
+
+# Wizard run artifacts: raw Kit API responses and captured answers, which
+# carry live account data. The findings belong in the ticket, not in git.
+.scratch/launch-tasks/kit-provisioning-raw/
+.scratch/launch-tasks/kit-provisioning-answers.env
+.scratch/launch-tasks/kit-unsubscribe-probe-raw/
+
+.scratch/launch-tasks/kit-resubscribe-form-raw/
+.scratch/launch-tasks/kit-resubscribe-form-answers.env
