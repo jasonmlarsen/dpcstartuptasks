@@ -85,7 +85,7 @@ A Status meaning this Task will never apply to this Practice. Stops counting aga
 _Avoid_: N/A as a stored value, skipped, dismissed, hidden
 
 **Note**:
-A Practice's own writing on a Task, shared with its Members. Never visible to another Practice, and never authored in raw HTML. Visible to the Admin in Support View — the word *private* was dropped on purpose when that was decided, rather than left standing as a promise the product no longer keeps.
+A Practice's own writing on a Task, belonging to the Practice rather than to whoever typed it — a Member who Leaves does not take their Notes with them. Never visible to another Practice, and never authored in raw HTML. Visible to the Admin in Support View — the word *private* was dropped on purpose when that was decided, rather than left standing as a promise the product no longer keeps, and the Note field carries a quiet line saying so.
 _Avoid_: Private Note, Custom Note (*Custom* means authored by a Practice rather than the Admin, and there is no Admin-authored note for it to contrast with), comment, annotation
 
 **Task Entry**:
@@ -145,3 +145,25 @@ _Avoid_: Sync, webhook (there are none), Kit integration
 **Consent Wording**:
 The exact sentence a User agreed to, identified by a version. The wording is versioned and never rewritten in place, so an old version always means what it meant.
 _Avoid_: Terms, policy, disclaimer
+
+### Leaving
+
+**Leaving**:
+A Member removing themselves from a Practice. Their Membership and their User are both gone, immediately and together, down the same revocation path as being removed by the Owner — there is no account without a Practice, so Leaving *is* deleting for a Member. What they wrote stays: Notes belong to the Practice. An Owner cannot Leave, only delete the Practice, because no co-owners means Leaving would orphan the list.
+_Avoid_: Deactivate, quit, close account (there is no account separate from the Practice)
+
+**Grace Period**:
+The thirty days between an Owner deleting their Practice and the Purge. The Practice is unreachable to everyone in it — Members are signed out the moment it is deleted — but nothing is destroyed yet, and the Admin can restore it if the Owner asks. Disclosed, never silent: the confirmation says the practice is permanently deleted after thirty days, because telling someone their data is gone while holding it for a month is the one promise here that would be false.
+_Avoid_: Trash, soft delete (the mechanism, not the period), cooling-off, retention window
+
+**Purge**:
+The irreversible end of the Grace Period: the Practice, its Task Entries, its Custom Tasks, its Memberships, its outstanding Invites, and the Users of everyone who was in it — the Owner included — all deleted. Nothing is purged before it, and there is no partial Purge. It deliberately does not reach Kit: a Kit subscriber consented to a separate relationship and leaves it through the unsubscribe link in the email, never through deleting a Practice.
+_Avoid_: Hard delete (accurate but says nothing about when), wipe, scrub (that word is taken, below)
+
+**Scrub**:
+Replacing the Notes and email addresses in a copy of the production database before it is used for development. The daily cold backup is real physician writing on a real laptop, so the scrub script is the default path into it; an unscrubbed copy is for restoring from, or for the rare incident that genuinely cannot be reproduced without the real rows. The handling rule lives in the restore runbook, not in the privacy policy — a policy that enumerates the operator's laptop hygiene is promising something it would then have to keep.
+_Avoid_: Anonymize (it is not rigorous enough to claim that word), sanitize, masking
+
+**Subprocessor**:
+A third party Launch Tasks hands user data to. Resend and Kit are named in the privacy policy, because a physician who receives email should be able to find out how; the backup providers are described rather than named, since naming them buys nothing and turns a vendor swap into a policy edit.
+_Avoid_: Vendor, integration, partner

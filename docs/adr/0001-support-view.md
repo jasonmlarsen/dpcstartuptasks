@@ -20,7 +20,11 @@ Scope matters to the judgement: this is a task list for *starting a company*. It
 
 ## Consequences
 
-- **The privacy policy must state that the operator can view a Practice's full contents, Notes included.** This is not optional copy — it is the disclosure that makes the decision honest, and it is the one part of this that is genuinely hard to reverse, because it cannot be un-told.
+- **The privacy policy must state that the operator can view a Practice's full contents, Notes included.** This is not optional copy — it is the disclosure that makes the decision honest, and it is the one part of this that is genuinely hard to reverse, because it cannot be un-told. **The sentence was written in [issue #18](https://github.com/jasonmlarsen/dpcstartuptasks/issues/18)**, and it names the operator rather than hiding behind *we*:
+
+  > Launch Tasks is run by one person. To help you when something goes wrong, that person can sign in to your practice and see it exactly as you do — including your Notes. Every time this happens it is recorded.
+
+  It also lands a second time, where it matters more: a quiet line under the Note field itself, since the policy is read once at registration and the Note box is where someone is about to type the thing they would regret. Neither wording may imply a gate — Support View is deliberately not consent-gated, per the rejection above.
 - Support View is **writable**, so a write made while impersonating is indistinguishable from the physician's own. Mitigated by a non-dismissible banner, an unextended 1-hour session, and an `impersonation_log`; not eliminated.
 - Deciding this also decided the naming: any future feature promising privacy *within* the product now has no vocabulary to borrow, which is the intended effect.
 
