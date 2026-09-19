@@ -9,25 +9,13 @@ import { appUrl } from "./config";
  * page submitting a token they hold must not be able to plant one in a
  * physician's browser.
  *
- * `Origin` is set by every browser on a cross-origin form submission and
- * cannot be forged by page script, so its absence is as disqualifying as a
- * wrong value. `Referer` is the fallback for the handful of clients that strip
- * `Origin`; if both are missing the request is refused rather than trusted.
+ * React Router v8 refuses a mismatched `Origin` before any action runs, so
+ * this covers what that one does not: a `POST` carrying no `Origin` at all,
+ * and one whose origin matches the URL the app was reached at but not the URL
+ * the app is actually served from. `Origin` is set by every browser on a form
+ * submission and cannot be forged by page script, so its absence is as
+ * disqualifying as a wrong value and there is no fallback header to consult.
  */
 export function isSameOrigin(request: Request): boolean {
-  const expected = new URL(appUrl()).origin;
-
-  const origin = request.headers.get("origin");
-  if (origin) return origin === expected;
-
-  const referer = request.headers.get("referer");
-  if (referer) {
-    try {
-      return new URL(referer).origin === expected;
-    } catch {
-      return false;
-    }
-  }
-
-  return false;
+  return request.headers.get("origin") === new URL(appUrl()).origin;
 }

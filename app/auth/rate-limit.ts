@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 
-import { and, count, eq, lt, gt } from "drizzle-orm";
+import { and, count, eq, gt, lt } from "drizzle-orm";
+import type { SQLiteColumn, SQLiteTable } from "drizzle-orm/sqlite-core";
 
 import type { AppDatabase } from "~/database/database";
 import { continueAttempt, signInLinkRequest } from "~/database/schema";
@@ -48,53 +49,13 @@ export function allowSignInLinkRequest(
   now: Date = new Date(),
 ): boolean {
   const emailDigest = digestOf(email);
-  const longWindowStart = new Date(now.getTime() - LONG_WINDOW_HOURS * HOUR);
 
-  // Nothing older than the longest window can affect any count, so this is
-  // the natural moment to drop it.
-  database
-    .delete(signInLinkRequest)
-    .where(
-      and(
-        eq(signInLinkRequest.emailDigest, emailDigest),
-        lt(signInLinkRequest.requestedAt, longWindowStart),
-      ),
-    )
-    .run();
-
-  const inLongWindow = countSince(database, emailDigest, longWindowStart);
-  if (inLongWindow >= LONG_WINDOW_LIMIT) return false;
-
-  const shortWindowStart = new Date(now.getTime() - SHORT_WINDOW_MINUTES * MINUTE);
-  if (countSince(database, emailDigest, shortWindowStart) >= SHORT_WINDOW_LIMIT) {
-    return false;
-  }
-
-  database
-    .insert(signInLinkRequest)
-    .values({ emailDigest, requestedAt: now })
-    .run();
-
-  return true;
-}
-
-function countSince(
-  database: AppDatabase,
-  emailDigest: string,
-  since: Date,
-): number {
-  const row = database
-    .select({ value: count() })
-    .from(signInLinkRequest)
-    .where(
-      and(
-        eq(signInLinkRequest.emailDigest, emailDigest),
-        gt(signInLinkRequest.requestedAt, since),
-      ),
-    )
-    .get();
-
-  return row?.value ?? 0;
+  // Both windows have to hold, and the longer one is checked first so that a
+  // day's worth of requests is not reset by fifteen quiet minutes.
+  return recordIfUnder(database, sendLeg(emailDigest), now, [
+    { limit: LONG_WINDOW_LIMIT, milliseconds: LONG_WINDOW_HOURS * HOUR },
+    { limit: SHORT_WINDOW_LIMIT, milliseconds: SHORT_WINDOW_MINUTES * MINUTE },
+  ]);
 }
 
 /**
@@ -109,35 +70,93 @@ export function allowContinueAttempt(
   ipAddress: string,
   now: Date = new Date(),
 ): boolean {
-  const windowStart = new Date(now.getTime() - CONTINUE_WINDOW_MINUTES * MINUTE);
+  return recordIfUnder(database, verifyLeg(ipAddress), now, [
+    { limit: CONTINUE_LIMIT, milliseconds: CONTINUE_WINDOW_MINUTES * MINUTE },
+  ]);
+}
 
+/**
+ * An axis: one table, the column its rows are keyed by, and the key.
+ *
+ * The two axes differ in what they count and how loudly they refuse, and in
+ * nothing else — so the counting lives here once and each axis is a handful
+ * of columns rather than a copy of the same three steps.
+ */
+interface Axis {
+  key: string;
+  subject: SQLiteColumn;
+  at: SQLiteColumn;
+  table: SQLiteTable;
+  /** Spelled out rather than derived: a column's `name` is its database name. */
+  row(at: Date): Record<string, unknown>;
+}
+
+function sendLeg(emailDigest: string): Axis {
+  return {
+    key: emailDigest,
+    subject: signInLinkRequest.emailDigest,
+    at: signInLinkRequest.requestedAt,
+    table: signInLinkRequest,
+    row: (requestedAt) => ({ emailDigest, requestedAt }),
+  };
+}
+
+function verifyLeg(ipAddress: string): Axis {
+  return {
+    key: ipAddress,
+    subject: continueAttempt.ipAddress,
+    at: continueAttempt.attemptedAt,
+    table: continueAttempt,
+    row: (attemptedAt) => ({ ipAddress, attemptedAt }),
+  };
+}
+
+interface Window {
+  limit: number;
+  milliseconds: number;
+}
+
+/**
+ * Record this attempt if every window still has room for it, and say whether
+ * it was recorded.
+ *
+ * Only attempts that were allowed are kept, so a refusal never extends its own
+ * lockout: pressing again while over the limit costs nothing and waits no
+ * longer. The limits are what they say they are rather than a punishment that
+ * grows.
+ */
+function recordIfUnder(
+  database: AppDatabase,
+  axis: Axis,
+  now: Date,
+  windows: Window[],
+): boolean {
+  const longest = Math.max(...windows.map((window) => window.milliseconds));
+
+  // Nothing older than the longest window can affect any count, so this is the
+  // natural moment to drop it.
   database
-    .delete(continueAttempt)
+    .delete(axis.table)
     .where(
       and(
-        eq(continueAttempt.ipAddress, ipAddress),
-        lt(continueAttempt.attemptedAt, windowStart),
+        eq(axis.subject, axis.key),
+        lt(axis.at, new Date(now.getTime() - longest)),
       ),
     )
     .run();
 
-  const row = database
-    .select({ value: count() })
-    .from(continueAttempt)
-    .where(
-      and(
-        eq(continueAttempt.ipAddress, ipAddress),
-        gt(continueAttempt.attemptedAt, windowStart),
-      ),
-    )
-    .get();
+  for (const window of windows) {
+    const since = new Date(now.getTime() - window.milliseconds);
+    const row = database
+      .select({ value: count() })
+      .from(axis.table)
+      .where(and(eq(axis.subject, axis.key), gt(axis.at, since)))
+      .get();
 
-  if ((row?.value ?? 0) >= CONTINUE_LIMIT) return false;
+    if ((row?.value ?? 0) >= window.limit) return false;
+  }
 
-  database
-    .insert(continueAttempt)
-    .values({ ipAddress, attemptedAt: now })
-    .run();
+  database.insert(axis.table).values(axis.row(now)).run();
 
   return true;
 }

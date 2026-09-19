@@ -1,6 +1,6 @@
 import { Form, Link, redirect } from "react-router";
 
-import { getSignedInUser, requestSignInLink } from "~/auth/server";
+import { requestSignInLink } from "~/auth/server";
 import { getServices } from "~/services/services";
 import type { Route } from "./+types/sign-in";
 
@@ -16,13 +16,10 @@ export function meta(_: Route.MetaArgs) {
  * about the address, so there is nobody to send a fresh link to automatically.
  * The one line above the field is everything that can honestly be said.
  */
-export async function loader({ context, request }: Route.LoaderArgs) {
-  const services = getServices(context);
-
-  if (await getSignedInUser(services, request)) {
-    throw redirect("/");
-  }
-
+export function loader({ request }: Route.LoaderArgs) {
+  // Nothing is looked up here, not even whether the visitor is already signed
+  // in. This page is the front of the only door in the product, and every
+  // branch in front of it is a branch that could one day be about an address.
   const url = new URL(request.url);
   return { afterFailedLink: url.searchParams.get("link") === "failed" };
 }

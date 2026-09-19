@@ -215,6 +215,32 @@ describe("the Continue Screen", () => {
 });
 
 describe("a Sign-in Link that fails", () => {
+  it("stops working after ten minutes", async () => {
+    const app = newApp();
+    await requestLink(app, PHYSICIAN);
+    const token = tokenFrom(linkFrom(app, PHYSICIAN));
+
+    // Ten minutes is tolerance for email latency and nothing else, so the
+    // thing worth pinning is that it really is ten and not the library's
+    // five-minute default. At nine the link still works; past ten it does not.
+    ageSignInLinks(app, 9 * 60);
+    const stillGood = await app.fetch("/continue", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({ token }),
+    });
+    expect(stillGood.headers.get("Location")).toBe("/");
+
+    const app2 = newApp();
+    await requestLink(app2, PHYSICIAN);
+    const staleToken = tokenFrom(linkFrom(app2, PHYSICIAN));
+    ageSignInLinks(app2, 11 * 60);
+
+    const expired = await pressContinue(app2, staleToken);
+    expect(expired.headers.get("Location")).toBe("/sign-in?link=failed");
+    expect(app2.database.select().from(session).all()).toHaveLength(0);
+  });
+
   it("lands on the sign-in page, names no cause, and reissues nothing", async () => {
     const app = newApp();
 
@@ -253,18 +279,16 @@ describe("the answer to the sign-in form", () => {
     await requestLink(app, PHYSICIAN);
     const overLimit = await requestLink(app, PHYSICIAN);
 
-    for (const response of [known, unknown, overLimit]) {
-      expect(response.status).toBe(302);
-      expect(response.headers.get("Location")).toBe("/check-your-email");
-    }
-
-    const pages = await Promise.all(
-      [known, unknown, overLimit].map(async () =>
-        (await app.fetch("/check-your-email")).text(),
-      ),
+    // The whole response, not just the status: a header or a body that
+    // differed would be the leak, and comparing only what we expected to
+    // differ would be assuming the answer.
+    const answers = await Promise.all(
+      [known, unknown, overLimit].map(describe_),
     );
-    expect(pages[1]).toBe(pages[0]);
-    expect(pages[2]).toBe(pages[0]);
+
+    expect(answers[0]).toContain("302 /check-your-email");
+    expect(answers[1]).toBe(answers[0]);
+    expect(answers[2]).toBe(answers[0]);
   });
 });
 
@@ -355,16 +379,6 @@ describe("the session", () => {
     expect(app.cookies.size).toBeGreaterThan(0);
     expect(await readable(await app.fetch("/"))).not.toContain("Signed in as");
   });
-
-  it("sends a signed-in physician away from the sign-in page", async () => {
-    const app = newApp();
-    await requestLink(app, PHYSICIAN);
-    await pressContinue(app, tokenFrom(linkFrom(app, PHYSICIAN)));
-
-    const response = await app.fetch("/sign-in");
-    expect(response.status).toBe(302);
-    expect(response.headers.get("Location")).toBe("/");
-  });
 });
 
 describe("what a physician can read before they have an account", () => {
@@ -380,27 +394,49 @@ describe("what a physician can read before they have an account", () => {
     expect((await app.fetch("/privacy")).status).toBe(200);
   });
 
-  it("runs the whole flow with no client JavaScript", async () => {
+  it("asks the browser for nothing but a form submission", async () => {
     const app = newApp();
     await requestLink(app, PHYSICIAN);
 
-    const signIn = await (await app.fetch("/sign-in")).text();
-    const continueScreen = await (
-      await app.fetch(linkFrom(app, PHYSICIAN))
-    ).text();
+    const signIn = await readable(await app.fetch("/sign-in"));
+    const continueScreen = await readable(
+      await app.fetch(linkFrom(app, PHYSICIAN)),
+    );
 
-    // Both screens are a plain form posting to an action. React Router's
-    // `<Scripts />` is on the page for later screens, but nothing here needs
-    // it to work, which is what `method="post"` on a real `<form>` means.
+    // Every test in this file is the evidence for the claim itself: nothing
+    // here runs a browser, and the whole flow works anyway. What this one
+    // pins is the reason that is possible — both screens are a real `<form>`
+    // posting to a real URL, so nothing on the login path is waiting for
+    // `<Scripts />` to arrive and hydrate it.
     for (const page of [signIn, continueScreen]) {
-      expect(page).toContain('method="post"');
+      expect(page).toMatch(/<form[^>]*action="\/[^"]*"[^>]*method="post"/);
     }
   });
 });
+
+/**
+ * A response reduced to everything a caller could read off it: status,
+ * every header, and the body.
+ */
+async function describe_(response: Response): Promise<string> {
+  const headers = [...response.headers]
+    .map(([name, value]) => `${name}: ${value}`)
+    .sort()
+    .join("\n");
+
+  return `${response.status} ${response.headers.get("Location") ?? ""}\n${headers}\n${await response.text()}`;
+}
 
 /** Push every recorded Sign-in Link request `seconds` further into the past. */
 function ageSignInLinkRequests(app: TestApp, seconds: number) {
   app.database.run(
     sql`update sign_in_link_request set requested_at = requested_at - ${seconds}`,
+  );
+}
+
+/** Push every unspent Sign-in Link `seconds` closer to its expiry. */
+function ageSignInLinks(app: TestApp, seconds: number) {
+  app.database.run(
+    sql`update verification set expires_at = expires_at - ${seconds}`,
   );
 }

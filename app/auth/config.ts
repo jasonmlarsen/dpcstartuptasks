@@ -1,3 +1,5 @@
+import { parseCidr } from "./ip-address";
+
 /**
  * The environment the only door into the product depends on.
  *
@@ -55,38 +57,15 @@ export function trustedProxies(): string[] {
  */
 const DEVELOPMENT_TRUSTED_PROXIES = ["127.0.0.1", "::1"];
 
-/** Entries that are neither an IP address nor a CIDR range. */
+/**
+ * Entries that are neither an IP address nor a CIDR range.
+ *
+ * The same parser the client-IP derivation uses, on purpose: an entry this
+ * accepted and that one dropped would be a chain that boots clean and then
+ * trusts nothing, refusing every Continue press.
+ */
 export function invalidProxyEntries(entries: string[]): string[] {
-  return entries.filter((entry) => !isIpOrCidr(entry));
-}
-
-function isIpOrCidr(entry: string): boolean {
-  const slash = entry.lastIndexOf("/");
-  const address = slash === -1 ? entry : entry.slice(0, slash);
-
-  if (slash !== -1) {
-    const prefix = entry.slice(slash + 1);
-    if (!/^\d+$/.test(prefix)) return false;
-    const maximum = address.includes(":") ? 128 : 32;
-    if (Number(prefix) > maximum) return false;
-  }
-
-  return isIpv4(address) || isIpv6(address);
-}
-
-function isIpv4(address: string): boolean {
-  const octets = address.split(".");
-  if (octets.length !== 4) return false;
-  return octets.every(
-    (octet) => /^\d{1,3}$/.test(octet) && Number(octet) <= 255,
-  );
-}
-
-function isIpv6(address: string): boolean {
-  if (!address.includes(":")) return false;
-  if ((address.match(/::/g) ?? []).length > 1) return false;
-  const groups = address.split(":").filter((group) => group.length > 0);
-  return groups.every((group) => /^[0-9a-fA-F]{1,4}$/.test(group));
+  return entries.filter((entry) => parseCidr(entry) === null);
 }
 
 /**
