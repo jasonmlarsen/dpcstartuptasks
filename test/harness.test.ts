@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import { expect, onTestFinished, test } from "vitest";
 
-import { HEALTH_CHECK_ROW_ID, healthCheck } from "~/database/schema";
+import { globalTask, HEALTH_CHECK_ROW_ID, healthCheck, phase } from "~/database/schema";
 import { createTestApp, type TestApp } from "./harness";
 
 function freshApp(): TestApp {
@@ -64,6 +64,16 @@ test("each app gets its own database, so one test cannot see another's rows", as
 
   expect(first.database.select().from(healthCheck).all()).toHaveLength(0);
   expect(second.database.select().from(healthCheck).all()).toHaveLength(1);
+});
+
+test("every test app opens a real, seeded Task Library", () => {
+  const app = freshApp();
+
+  // The fixture is a fresh database seeded from the cleaned CSV, so a later
+  // ticket's test can render a Phase or set a Status without building content
+  // of its own — and without a fixture that could drift from the real file.
+  expect(app.database.select().from(globalTask).all()).toHaveLength(98);
+  expect(app.database.select().from(phase).all()).toHaveLength(11);
 });
 
 test("the fakes the app was built with are the ones the test can read", async () => {

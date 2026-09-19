@@ -6,6 +6,7 @@ import { createRequestHandler } from "react-router";
 import * as serverBuild from "virtual:react-router/server-build";
 
 import { createDatabase, type AppDatabase } from "~/database/database";
+import { seed, TASK_LIBRARY_CSV_PATH } from "~/seed/seed";
 import { createServicesContext, type AppServices } from "~/services/services";
 import { FakeEmailSender } from "./fakes/fake-email-sender";
 import { FakeKitClient } from "./fakes/fake-kit-client";
@@ -23,7 +24,7 @@ import { FakeKitClient } from "./fakes/fake-kit-client";
 export interface TestApp {
   /** Dispatch a request through the real handler. Cookies carry across calls. */
   fetch(input: string | URL | Request, init?: RequestInit): Promise<Response>;
-  /** The same database the routes just used, for asserting on rows. */
+  /** The same database the routes just used, seeded, for asserting on rows. */
   database: AppDatabase;
   emailSender: FakeEmailSender;
   kitClient: FakeKitClient;
@@ -41,19 +42,20 @@ const TEST_ORIGIN = "http://localhost:3000";
 /**
  * Build an app over a fresh SQLite file and two fakes.
  *
- * The file is a real file in a temp directory, migrated on open, and thrown
- * away afterwards — there is no fixture framework and no shared state to
- * reset, because SQLite is a file (ADR-0005) and Task Entries are eager
- * (ADR-0003), so "the row does not exist yet" is never a case to construct.
+ * The file is a real file in a temp directory, migrated on open, seeded from
+ * the cleaned CSV, and thrown away afterwards — there is no fixture framework
+ * and no shared state to reset, because SQLite is a file (ADR-0005) and Task
+ * Entries are eager (ADR-0003), so "the row does not exist yet" is never a
+ * case to construct.
  *
- * Still owed: the spec's seam 1 is seeded from the cleaned CSV, and this one is
- * only migrated, because the Seed Script does not exist yet. When it lands, its
- * ticket seeds here and every later test gets the 98 Tasks and 11 Phases for
- * free.
+ * Seeding here rather than per test is what lets every later test open a real
+ * Task Library — the same 98 Tasks across 11 Phases a physician sees — without
+ * asking for it or building a fixture that would drift from the real file.
  */
 export function createTestApp(): TestApp {
   const directory = mkdtempSync(join(tmpdir(), "launch-tasks-"));
   const database = createDatabase(join(directory, "test.sqlite"));
+  seed(database, TASK_LIBRARY_CSV_PATH);
 
   const emailSender = new FakeEmailSender();
   const kitClient = new FakeKitClient();

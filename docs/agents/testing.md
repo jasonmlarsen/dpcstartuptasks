@@ -35,10 +35,9 @@ Builds the app's real request handler over a fresh SQLite file, dispatches a
 sign in and stay signed in. Assertions go on status, redirect target, rendered
 text, and rows in the database afterwards.
 
-**Still owed:** the settled shape is a fresh file *seeded from the cleaned CSV*.
-Today the harness only migrates, because the Seed Script (seam 4) does not exist
-yet. The ticket that builds it seeds here too, and every test written afterwards
-gets the 98 Tasks and 11 Phases without asking.
+The fresh file is *seeded from the cleaned CSV*, so every test opens a real
+Task Library — the same 98 Tasks across 11 Phases a physician sees — without
+asking for it and without a fixture that could drift from the real file.
 
 ```ts
 const app = createTestApp();
@@ -98,14 +97,22 @@ Feedback and every User including the Owner; the digest is never sent empty.
 The Seed Script is the one piece of the system with no user at all, so its
 guarantees are asserted directly: it refuses a populated database; it produces
 exactly 98 Tasks and 11 Phases from the **real committed CSV**, not a fixture;
-a duplicate slug is a hard error; a blank link label is a hard error; the 68
+a duplicate slug is a hard error; a blank link label is a hard error; the 60
 dependency edges are validated for cycles and dangling targets; every row lands
 with `published_at` set.
+
+(The spec counts 68 edges, which is the measurement of the *original* file.
+Seven have a cut Phase 12 Task as their source and one is Website Hosting's
+duplicate of Website Maintenance's, so 60 reach the cleaned file.)
 
 The numbers in the spec are measurements of that file, and this test is what
 keeps them true.
 
-*Not yet built — the Seed Script is a later ticket. Build it to this shape.*
+`test/seed.test.ts` calls `seed(database, TASK_LIBRARY_CSV_PATH)` against a
+temp SQLite file. Only the malformed-input cases — the duplicate slug, the
+blank label, the cycle, the dangling target — write a CSV of their own, because
+the committed file is well-formed by construction and a broken one has to be
+built to be seen.
 
 ## Seams deliberately not created
 

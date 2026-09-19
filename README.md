@@ -34,6 +34,28 @@ keyword UptimeRobot watches for — and it can only answer it by reading that
 string out of a real row in a real SQLite file. A database that cannot be
 opened, never migrated, or errors on read gets a `503` with no keyword in it.
 
+## Seeding the Task Library
+
+```sh
+npm run db:seed                                    # the default database
+npm run db:seed -- --database /data/launch-tasks.sqlite
+```
+
+There is no flag for the CSV: a Seed loads the committed Task Library or it
+does not run. The script, the two modules it needs and the CSV all ship in the
+container, so the same command works against the volume on the VPS.
+
+The Seed Script loads the 98 Tasks and 11 Phases of
+[`docs/seed/task-library.csv`](./docs/seed/README.md) into an empty database,
+all Published. It **can only ever add**: there is no delete path and no update
+path, and it refuses outright when `global_task` already has rows — which is
+what makes it safe to point at production. It also knows only about Phases,
+Tasks and Helpful Links, so it cannot create a Practice, a User or a
+Membership.
+
+Discarding a database is `rm data/launch-tasks.sqlite`, typed on purpose. It is
+not a feature of the product, and there is no screen for any of this.
+
 ## Styling
 
 [`styles/design-tokens.css`](./styles/design-tokens.css) is the source of truth
