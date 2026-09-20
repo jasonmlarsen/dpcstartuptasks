@@ -102,9 +102,8 @@ export function recordEmailConsentChoice(
  * Hand a User the Email Consent their registration form recorded, if there is
  * one waiting and they have not already granted it.
  *
- * Append-only in both directions: an act that is already on the User is never
- * rewritten — not its timestamp and not its version, because an old version
- * has to keep meaning what it meant — and nothing here can clear one. A
+ * Append-only, which `recordConsent` below is the whole of: an act already
+ * on the User is never rewritten, and nothing here can clear one. A
  * physician who declined and later ticks the box has granted consent, which is
  * a grant like any other; the Subscribe button in settings is the deliberate
  * path to the same place.
@@ -139,12 +138,75 @@ export function claimEmailConsent(
 
   if (!waiting) return;
 
+  recordConsent(database, userId, waiting.grantedAt, waiting.version);
+}
+
+/**
+ * When a User granted Email Consent, or null if they never did.
+ *
+ * The act and its date, which is the whole of what the app knows. There is
+ * deliberately no *subscribed* to read here: the app never calls Kit from a
+ * loader, so settings can say that somebody said yes and when, and nothing
+ * about whether they are on the list today. Anything more would be a page
+ * inventing a state the product does not hold.
+ */
+export function emailConsentGrantedAt(
+  database: AppWriter,
+  userId: string,
+): Date | null {
+  const row = database
+    .select({ grantedAt: user.emailConsentGrantedAt })
+    .from(user)
+    .where(eq(user.id, userId))
+    .get();
+
+  return row?.grantedAt ?? null;
+}
+
+/**
+ * Settings' Subscribe button: a User who declined at registration changing
+ * their mind.
+ *
+ * A button and never a checkbox, because consent is append-only and a
+ * checkbox implies it toggles back. This grants; nothing in the product
+ * ungrants, and the unsubscribe link in the footer of an email is where
+ * withdrawal actually happens.
+ *
+ * The Consent Wording shown beside the button is `EMAIL_CONSENT_WORDING`,
+ * the same sentence the registration form shows and the same version
+ * recorded here — a version has to name a sentence somebody actually read.
+ *
+ * Enqueuing the Kit Sync Job that follows from this belongs to the Kit
+ * ticket (#41), which is also where a Suppressed address stops being shown
+ * a button at all.
+ */
+export function grantEmailConsent(
+  database: AppWriter,
+  userId: string,
+  now: Date = new Date(),
+): void {
+  recordConsent(database, userId, now, EMAIL_CONSENT_VERSION);
+}
+
+/**
+ * Write an act of consent onto a User, and never over one.
+ *
+ * The `IS NULL` is the append-only rule spelled as a clause, and it is
+ * spelled once: an act already recorded keeps its timestamp and its
+ * version, because an old version has to go on meaning what it meant. Both
+ * ways of granting — the box on the registration form, claimed when the
+ * account appears, and the Subscribe button — come through here, so there
+ * is no second place the rule could be written slightly differently.
+ */
+function recordConsent(
+  database: AppWriter,
+  userId: string,
+  grantedAt: Date,
+  version: string,
+): void {
   database
     .update(user)
-    .set({
-      emailConsentGrantedAt: waiting.grantedAt,
-      emailConsentVersion: waiting.version,
-    })
+    .set({ emailConsentGrantedAt: grantedAt, emailConsentVersion: version })
     .where(and(eq(user.id, userId), isNull(user.emailConsentGrantedAt)))
     .run();
 }

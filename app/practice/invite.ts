@@ -15,6 +15,7 @@ import {
 } from "~/database/schema";
 import { MAIL_FROM, MAIL_REPLY_TO } from "~/services/email-sender";
 import type { AppServices } from "~/services/services";
+import { practiceIsLive } from "./deletion";
 import { hasRoom, memberCount, pendingInvitesOf, roomForAnotherMember } from "./people";
 import type { CurrentPractice } from "./practice";
 
@@ -266,7 +267,13 @@ export function readInvite(
   if (!row) return { status: "unrecognised" };
 
   if (row.acceptedAt) return { status: "used" };
-  if (row.revokedAt) return { status: "revoked" };
+  // A Practice in its Grace Period has no places left to offer, and the
+  // Owner deleting it is the Owner taking every outstanding offer back —
+  // which is what *withdrawn* says, in the words the link already has. The
+  // row itself is untouched, like everything else inside the thirty days.
+  if (row.revokedAt || !practiceIsLive(database, row.practiceId)) {
+    return { status: "revoked" };
+  }
   if (row.expiresAt <= now) return { status: "expired" };
   if (!roomForAnotherMember(database, row.practiceId)) return { status: "practice-full" };
   if (elsewhereWithWork(database, row.email)) {
@@ -339,6 +346,7 @@ export function acceptInviteOnSignIn(
         // Practice that filled up while the email sat in an inbox is not
         // joinable either — the link says so, in those words.
         row.practiceId !== existing?.practiceId &&
+        practiceIsLive(database, row.practiceId) &&
         roomForAnotherMember(database, row.practiceId),
     );
 

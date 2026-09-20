@@ -333,6 +333,24 @@ export const practice = sqliteTable("practice", {
    */
   tailoringSettledAt: integer("tailoring_settled_at", { mode: "timestamp" }),
 
+  /**
+   * Null means live. Set is the Grace Period: the Owner has deleted this
+   * Practice, everyone in it is locked out, and **nothing has been
+   * destroyed**. The Purge at day 30 is what destroys it (ADR-0007), and
+   * this column is the only thing standing between the two.
+   *
+   * A column rather than a delete because the confirmation the Owner read
+   * promises thirty days, and in v1 honouring that promise is the operator
+   * clearing this timestamp by hand — a named gap, documented in the
+   * restore runbook, and the reason every screen behind the door goes
+   * dark: `practiceFor` will not return a Practice with this column set,
+   * so no page has to remember to check. The two reads that look past it
+   * are named where they live — `practiceIsLive`, for the invite link,
+   * which is the one way into a Practice that does not start from a
+   * Membership, and `hasDeletedPractice`, which only chooses a paragraph.
+   */
+  deletedAt: integer("deleted_at", { mode: "timestamp" }),
+
   createdAt: integer("created_at", { mode: "timestamp" })
     .notNull()
     .default(sql`(unixepoch())`),

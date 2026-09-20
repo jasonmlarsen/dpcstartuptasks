@@ -57,6 +57,13 @@
       "when": 1789870195610,
       "tag": "0007_people",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1789871043680,
+      "tag": "0008_practice_deletion",
+      "breakpoints": true
     }
   ]
 }

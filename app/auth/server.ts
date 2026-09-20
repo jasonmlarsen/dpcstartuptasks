@@ -198,6 +198,29 @@ export async function revokeAllSessions(
 }
 
 /**
+ * Sign out whoever is holding this request's cookie.
+ *
+ * One session and not all of them, unlike `revokeAllSessions`: this is a
+ * physician on a shared laptop pressing a button, not an Owner taking
+ * somebody's access away, and ending their other devices' sessions would be
+ * a surprise. The headers carry the cookie deletion, so the caller has to
+ * hand them to the redirect it answers with.
+ */
+export async function signOut(
+  services: AppServices,
+  request: Request,
+): Promise<Headers> {
+  const auth = authFor(services);
+
+  const response = await auth.api.signOut({
+    headers: request.headers,
+    asResponse: true,
+  });
+
+  return response.headers;
+}
+
+/**
  * Delete a User outright, sessions first.
  *
  * For a Member, Leaving *is* deleting: there is no account without a Practice,

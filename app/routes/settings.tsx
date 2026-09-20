@@ -1,6 +1,13 @@
 import { data, Form, Link, redirect } from "react-router";
 
-import { PRACTICE_PEOPLE_CAP } from "~/database/schema";
+import { setDisplayName, signOut } from "~/auth/server";
+import {
+  emailConsentGrantedAt,
+  EMAIL_CONSENT_WORDING,
+  grantEmailConsent,
+} from "~/consent/email-consent";
+import { PRACTICE_PEOPLE_CAP, PRACTICE_STATES } from "~/database/schema";
+import { deletePractice } from "~/practice/deletion";
 import {
   inviteToPractice,
   pendingInvites,
@@ -14,7 +21,9 @@ import {
   removeMember,
   type PersonInPractice,
 } from "~/practice/people";
+import { describePractice } from "~/practice/practice";
 import { requireCurrentPerson } from "~/practice/signed-in-practice";
+import { asPracticeState } from "~/practice/tailoring";
 import { getServices } from "~/services/services";
 import type { Route } from "./+types/settings";
 
@@ -23,26 +32,32 @@ export function meta(_: Route.MetaArgs) {
 }
 
 /**
- * Settings, which is one page of plain sections and nothing to navigate.
+ * Settings: one page, five plain sections, nothing to navigate and nothing
+ * to discover.
  *
- * Only **People** is here so far: the Practice, Email from us, Your account
- * and Danger Zone sections arrive with the settings ticket, which is where
- * deleting a Practice and its thirty-day Grace Period live. This ticket owes
- * the three acts that change who is in a Practice, and they need a screen to
- * happen on.
+ * Practice, People, Email from us, Your account, Danger Zone, in that order
+ * and on one scroll. No tabs, no sub-navigation, no table — a table pulls
+ * the language towards *Seats* and a role column, both of which
+ * `CONTEXT.md` avoids, and the shape is what exerts that pull rather than
+ * anyone deciding to write them.
  *
- * There is no *Seats*, no role column and no role editor. A Member can do
- * anything on the list the Owner can, and the three things only an Owner can
- * do — invite, remove, delete — are simply absent for everyone else rather
- * than shown disabled.
+ * There is no role editor. A Member can do anything on the list the Owner
+ * can, and the three acts that are the Owner's alone — invite, remove,
+ * delete — are simply absent for everyone else rather than shown disabled.
+ *
+ * The one thing on this page that cannot be undone by pressing something
+ * else is in the Danger Zone, and even that is recoverable for thirty days.
  */
 export async function loader({ context, request }: Route.LoaderArgs) {
   const services = getServices(context);
   const { user, practice } = await requireCurrentPerson(services, request);
 
+  const consentGrantedAt = emailConsentGrantedAt(services.database, user.id);
+
   return {
     you: { userId: user.id, email: user.email, name: user.name },
     practiceName: practice.name,
+    practiceState: practice.state,
     isOwner: practice.role === "owner",
     people: peopleIn(services.database, practice),
     // A Member is never shown who has been invited and not yet arrived: it
@@ -53,6 +68,14 @@ export async function loader({ context, request }: Route.LoaderArgs) {
         : [],
     placesLeft:
       PRACTICE_PEOPLE_CAP - placesTaken(services.database, practice.id),
+    // Formatted here rather than in the component, because the sentence it
+    // lands in is a statement about a day and the server is the only place
+    // that renders it twice the same way.
+    consentGrantedOn: consentGrantedAt ? asPlainDate(consentGrantedAt) : null,
+    // The delete question is a URL, so it survives a reload and a back
+    // button and costs no client JS — the same shape the drawer's Delete
+    // this task uses.
+    confirmingDelete: new URL(request.url).searchParams.get("confirm") === "delete",
   };
 }
 
@@ -62,6 +85,39 @@ export async function action({ context, request }: Route.ActionArgs) {
 
   const submitted = await request.formData();
   const intent = submitted.get("intent");
+
+  if (intent === "practice") {
+    describePractice(services.database, practice, {
+      name: String(submitted.get("practiceName") ?? ""),
+      state: asPracticeState(submitted.get("state")),
+    });
+
+    // The Display Name is the person's and not the Practice's, and it goes
+    // through the auth module because `name` is Better Auth's own column
+    // (ADR-0004). It shares this form because the two names are what a
+    // physician came here to fix, and two Save buttons would be a puzzle.
+    await setDisplayName(
+      services,
+      user.id,
+      String(submitted.get("displayName") ?? "").trim(),
+    );
+
+    throw redirect("/settings");
+  }
+
+  if (intent === "subscribe") {
+    grantEmailConsent(services.database, user.id);
+
+    throw redirect("/settings");
+  }
+
+  if (intent === "sign-out") {
+    // The cookie deletion is in these headers, so the redirect has to carry
+    // them or the physician stays signed in on a page telling them they are
+    // not.
+    const headers = await signOut(services, request);
+    throw redirect("/", { headers });
+  }
 
   if (intent === "invite") {
     const attempt = await inviteToPractice(services, practice, user, {
@@ -118,14 +174,45 @@ export async function action({ context, request }: Route.ActionArgs) {
     throw redirect("/sign-in");
   }
 
+  if (intent === "delete-practice") {
+    const deletion = await deletePractice(services, practice);
+
+    if (deletion === "not-owner") {
+      throw data("Only the owner can delete this practice", { status: 403 });
+    }
+
+    // Their own session went with everyone else's, so this lands on the
+    // landing page — with the one thing they need to know still on it.
+    throw redirect("/?deleted=1");
+  }
+
   throw data("No such action", { status: 400 });
+}
+
+/** A date as a physician reads it: *3 March 2026*. */
+function asPlainDate(when: Date): string {
+  return when.toLocaleDateString("en-GB", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
 }
 
 export default function Settings({
   loaderData,
   actionData,
 }: Route.ComponentProps) {
-  const { you, practiceName, isOwner, people, invites, placesLeft } = loaderData;
+  const {
+    you,
+    practiceName,
+    practiceState,
+    isOwner,
+    people,
+    invites,
+    placesLeft,
+    consentGrantedOn,
+    confirmingDelete,
+  } = loaderData;
   const attempt = actionData?.attempt;
 
   return (
@@ -141,100 +228,432 @@ export default function Settings({
         </div>
       </header>
 
-      <main className="mx-auto max-w-2xl px-6 py-10">
-        <h2 className="text-2xl font-bold text-gray-900">People</h2>
-        <p className="mt-2 text-gray-700">
-          A practice holds {PRACTICE_PEOPLE_CAP} people. Everyone here can do
-          the same things on the list; only the owner can invite or remove.
-        </p>
+      <main className="mx-auto max-w-2xl space-y-12 px-6 py-10">
+        <PracticeSection
+          practiceName={practiceName}
+          practiceState={practiceState}
+          you={you}
+        />
 
-        <ul className="mt-6 divide-y divide-gray-200 border-y border-gray-200">
-          {people.map((person) => (
-            <li key={person.userId} className="flex items-center justify-between gap-4 py-4">
-              <Person person={person} isYou={person.userId === you.userId} />
-              {isOwner && person.role === "member" && (
-                <RemoveButton person={person} />
-              )}
-            </li>
-          ))}
+        <PeopleSection
+          you={you}
+          practiceName={practiceName}
+          isOwner={isOwner}
+          people={people}
+          invites={invites}
+          placesLeft={placesLeft}
+          attempt={attempt}
+        />
 
-          {invites.map((invitation) => (
-            <li key={invitation.id} className="flex items-center justify-between gap-4 py-4">
-              <div>
-                <p className="text-base text-gray-900">{invitation.email}</p>
-                <p className="text-sm text-gray-600">
-                  Invited — waiting for them to sign in
-                </p>
-              </div>
-              <RevokeButton invitation={invitation} />
-            </li>
-          ))}
-        </ul>
+        <EmailSection consentGrantedOn={consentGrantedOn} />
 
-        {isOwner ? (
-          <InviteSection
-            attempt={attempt}
-            placesLeft={placesLeft}
-            you={you}
-            practiceName={practiceName}
-          />
-        ) : (
-          <LeaveSection />
-        )}
+        <AccountSection email={you.email} />
+
+        <DangerZone
+          isOwner={isOwner}
+          practiceName={practiceName}
+          asking={confirmingDelete}
+        />
       </main>
     </div>
   );
 }
 
-function Person({
-  person,
-  isYou,
+function SectionHeading({ children }: { children: string }) {
+  return <h2 className="text-2xl font-bold text-gray-900">{children}</h2>;
+}
+
+/**
+ * The Practice: the two names, and the state.
+ *
+ * The other two things the Tailoring Wizard was told — a fixed location,
+ * and employees inside six months — are stored and are deliberately not
+ * here. Nothing ever re-reads them (ADR-0002), so showing them would
+ * promise a re-tailoring that does not exist, and an editor for them would
+ * promise one twice over.
+ *
+ * State is here because it is the one part of the Practice Profile with a
+ * live reader: it turns the list's quiet `Varies by state` pill into a
+ * pointer at a particular state's rules. Changing it never re-runs the
+ * Wizard — that screen is once per Practice and is gone.
+ */
+function PracticeSection({
+  practiceName,
+  practiceState,
+  you,
 }: {
-  person: PersonInPractice;
-  isYou: boolean;
+  practiceName: string | null;
+  practiceState: string | null;
+  you: { name: string };
 }) {
   return (
-    <div>
-      {/* The name if there is one, and the address if there is not. */}
-      <p className="text-base text-gray-900">
-        {person.name ?? person.email}
-        {isYou && <span className="text-gray-500"> (you)</span>}
+    <section>
+      <SectionHeading>Practice</SectionHeading>
+      <p className="mt-2 text-gray-700">
+        Nothing here was required when you signed up, and none of it is
+        required now. It is used to address you and to point out the tasks
+        that work differently where you are.
       </p>
-      <p className="text-sm text-gray-600">
-        {person.name ? `${person.email} — ` : ""}
-        {person.role === "owner" ? "Owner" : "Member"}
-      </p>
-    </div>
+
+      <Form method="post" className="mt-6 space-y-6">
+        <input type="hidden" name="intent" value="practice" />
+
+        <div>
+          <label
+            htmlFor="displayName"
+            className="block text-sm font-medium text-gray-700"
+          >
+            Your name
+          </label>
+          <input
+            id="displayName"
+            name="displayName"
+            type="text"
+            autoComplete="name"
+            placeholder="Dr. Sarah Reyes"
+            defaultValue={you.name}
+            className="mt-2 w-full rounded-md border border-gray-300 px-4 py-3 text-base"
+          />
+        </div>
+
+        <div>
+          <label
+            htmlFor="settingsPracticeName"
+            className="block text-sm font-medium text-gray-700"
+          >
+            Practice name
+          </label>
+          <input
+            id="settingsPracticeName"
+            name="practiceName"
+            type="text"
+            defaultValue={practiceName ?? ""}
+            className="mt-2 w-full rounded-md border border-gray-300 px-4 py-3 text-base"
+          />
+        </div>
+
+        <div>
+          <label
+            htmlFor="state"
+            className="block text-sm font-medium text-gray-700"
+          >
+            The state you practise in
+          </label>
+          <select
+            id="state"
+            name="state"
+            defaultValue={practiceState ?? ""}
+            className="mt-2 w-full rounded-md border border-gray-300 px-4 py-3 text-base"
+          >
+            <option value="">Prefer not to say</option>
+            {PRACTICE_STATES.map((state) => (
+              <option key={state} value={state}>
+                {state}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <button
+          type="submit"
+          className="rounded-md bg-primary px-4 py-3 text-base font-medium text-white sm:w-auto"
+        >
+          Save
+        </button>
+      </Form>
+    </section>
   );
 }
 
-function RemoveButton({ person }: { person: PersonInPractice }) {
+function PeopleSection({
+  you,
+  practiceName,
+  isOwner,
+  people,
+  invites,
+  placesLeft,
+  attempt,
+}: {
+  you: { userId: string; name: string; email: string };
+  practiceName: string | null;
+  isOwner: boolean;
+  people: PersonInPractice[];
+  invites: PendingInvite[];
+  placesLeft: number;
+  attempt: Awaited<ReturnType<typeof inviteToPractice>> | undefined;
+}) {
   return (
-    <Form method="post">
-      <input type="hidden" name="intent" value="remove-member" />
-      <input type="hidden" name="userId" value={person.userId} />
-      <button
-        type="submit"
-        className="rounded-md border border-gray-400 px-3 py-2 text-sm font-medium text-gray-900"
-      >
-        Remove
-      </button>
-    </Form>
+    <section>
+      <SectionHeading>People</SectionHeading>
+      <p className="mt-2 text-gray-700">
+        A practice holds {PRACTICE_PEOPLE_CAP} people. Everyone here can do
+        the same things on the list; only the owner can invite or remove.
+      </p>
+
+      <ul className="mt-6 divide-y divide-gray-200 border-y border-gray-200">
+        {people.map((person) => (
+          <li
+            key={person.userId}
+            className="flex items-center justify-between gap-4 py-4"
+          >
+            <Person person={person} isYou={person.userId === you.userId} />
+            {isOwner && person.role === "member" && (
+              <RemoveButton person={person} />
+            )}
+          </li>
+        ))}
+
+        {invites.map((invitation) => (
+          <li
+            key={invitation.id}
+            className="flex items-center justify-between gap-4 py-4"
+          >
+            <div>
+              <p className="text-base text-gray-900">{invitation.email}</p>
+              <p className="text-sm text-gray-600">
+                Invited — waiting for them to sign in
+              </p>
+            </div>
+            <RevokeButton invitation={invitation} />
+          </li>
+        ))}
+      </ul>
+
+      {isOwner && (
+        <InviteSection
+          attempt={attempt}
+          placesLeft={placesLeft}
+          you={you}
+          practiceName={practiceName}
+        />
+      )}
+    </section>
   );
 }
 
-function RevokeButton({ invitation }: { invitation: PendingInvite }) {
+/**
+ * Email from us: the act, its date, and nothing about a subscription.
+ *
+ * The app never calls Kit from a loader, so it cannot say whether anybody
+ * is on the list today — and this section must not sound as though it can.
+ * What it can say is what happened: *you said yes, on this day*. The
+ * accepted cost is that someone who unsubscribed a year ago may read the
+ * sentence as *you are subscribed*; the alternative is the page inventing a
+ * state it does not hold.
+ *
+ * Withdrawal is not here, because it is not ours: the unsubscribe link in
+ * the footer of the email is where it happens and where it works, whatever
+ * this page does.
+ *
+ * A Suppressed address — one Kit has told us is Cancelled — loses the
+ * Subscribe button entirely and gets a paragraph and a link to the
+ * Resubscribe Form instead. That arrives with the Kit ticket (#41), which
+ * is what puts a `kit_suppressed_at` on the User in the first place.
+ */
+function EmailSection({ consentGrantedOn }: { consentGrantedOn: string | null }) {
   return (
-    <Form method="post">
-      <input type="hidden" name="intent" value="revoke-invite" />
-      <input type="hidden" name="inviteId" value={invitation.id} />
-      <button
-        type="submit"
-        className="rounded-md border border-gray-400 px-3 py-2 text-sm font-medium text-gray-900"
-      >
-        Withdraw
-      </button>
-    </Form>
+    <section>
+      <SectionHeading>Email from us</SectionHeading>
+
+      {consentGrantedOn ? (
+        <p className="mt-2 text-gray-700">
+          You said yes to our email on {consentGrantedOn}.
+        </p>
+      ) : (
+        <>
+          <p className="mt-2 text-gray-700">
+            You have not said yes to email from us. Launch Tasks is free and
+            stays free either way.
+          </p>
+          {/*
+            The Consent Wording itself, and not a paraphrase of it: the
+            version stamped on the act names a sentence, so the sentence has
+            to be the one the physician actually read. It is the same
+            wording the registration form shows, under the same version.
+          */}
+          <p className="mt-4 text-gray-700">{EMAIL_CONSENT_WORDING}</p>
+          <Form method="post" className="mt-4">
+            <input type="hidden" name="intent" value="subscribe" />
+            {/* A button and never a checkbox: consent is append-only, and a
+                checkbox implies it toggles back. */}
+            <button
+              type="submit"
+              className="rounded-md bg-primary px-4 py-3 text-base font-medium text-white sm:w-auto"
+            >
+              Subscribe
+            </button>
+          </Form>
+        </>
+      )}
+
+      <p className="mt-4 text-sm text-gray-600">
+        The unsubscribe link at the bottom of any email we send always works,
+        whatever this page says — leaving the email list has nothing to do
+        with leaving Launch Tasks.
+      </p>
+    </section>
+  );
+}
+
+/**
+ * Your account, which is one address and a way out of the browser.
+ *
+ * The email is shown and is never editable: it is what a Sign-in Link is
+ * bound to, so changing it is an account migration and not a settings
+ * field. There is no input for it at all — a disabled box would be a
+ * control that looks like it might one day work.
+ */
+function AccountSection({ email }: { email: string }) {
+  return (
+    <section>
+      <SectionHeading>Your account</SectionHeading>
+      <p className="mt-2 text-gray-700">{email}</p>
+      <p className="mt-1 text-sm text-gray-600">
+        This is the address your sign-in links go to, and it cannot be
+        changed here. Your name is in the Practice section above.
+      </p>
+
+      <Form method="post" className="mt-4">
+        <input type="hidden" name="intent" value="sign-out" />
+        <button
+          type="submit"
+          className="rounded-md border border-gray-400 px-4 py-3 text-base font-medium text-gray-900"
+        >
+          Sign out
+        </button>
+      </Form>
+    </section>
+  );
+}
+
+/**
+ * The Danger Zone, which keeps that name deliberately: it reads outside
+ * developer circles, and the point of the section is that it is loud.
+ *
+ * For the Owner it is *Delete this practice*, behind two buttons and **no
+ * typing test**. The act is recoverable for thirty days, and a typing test
+ * on a recoverable act teaches a physician to fear the app without making
+ * anything safer.
+ *
+ * For a Member it is Leave, which for a Member is the same act as closing
+ * their account: there is no account without a Practice. An Owner is
+ * offered neither Leave nor a transfer — with no co-owners, Leaving would
+ * orphan the list, and inventing an ownership handover is a bigger decision
+ * than this screen should make.
+ */
+function DangerZone({
+  isOwner,
+  practiceName,
+  asking,
+}: {
+  isOwner: boolean;
+  practiceName: string | null;
+  asking: boolean;
+}) {
+  return (
+    <section className="rounded-md border border-error p-6">
+      <SectionHeading>Danger Zone</SectionHeading>
+
+      {isOwner ? (
+        <DeletePractice practiceName={practiceName} asking={asking} />
+      ) : (
+        <Leave />
+      )}
+    </section>
+  );
+}
+
+function DeletePractice({
+  practiceName,
+  asking,
+}: {
+  practiceName: string | null;
+  asking: boolean;
+}) {
+  if (!asking) {
+    return (
+      <>
+        <p className="mt-2 text-gray-700">
+          Deleting {practiceName ?? "your practice"} closes it for everyone in
+          it — the list, the notes, and the tasks you added.
+        </p>
+        <Link
+          to="/settings?confirm=delete"
+          className="mt-4 inline-block rounded-md border border-error px-4 py-3 text-base font-medium text-error"
+        >
+          Delete this practice
+        </Link>
+      </>
+    );
+  }
+
+  return (
+    <>
+      {/*
+        The sentence that has to be here, and has to say thirty. Nothing is
+        destroyed when this button is pressed — the practice is held for a
+        month and then purged — so telling a physician their data is gone
+        today would be the one false promise available on this screen.
+      */}
+      <p className="mt-2 text-gray-700">
+        Delete {practiceName ?? "your practice"}? Everyone in it is signed out
+        straight away, and it is permanently deleted after thirty days. Inside
+        those thirty days we can still bring it back if you ask us — reply to
+        any email from us and say so.
+      </p>
+
+      <div className="mt-4 flex flex-wrap items-center gap-4">
+        <Form method="post">
+          <input type="hidden" name="intent" value="delete-practice" />
+          <button
+            type="submit"
+            className="rounded-md bg-error px-4 py-3 text-base font-medium text-white"
+          >
+            Delete this practice
+          </button>
+        </Form>
+
+        {/* The second of the two buttons, and deliberately as easy to
+            press as the first: the confirmation is there to be escaped
+            from, so the way out is not a small grey link under it. */}
+        <Link
+          to="/settings"
+          className="rounded-md border border-gray-400 px-4 py-3 text-base font-medium text-gray-900"
+        >
+          Nope — take me back
+        </Link>
+      </div>
+    </>
+  );
+}
+
+/**
+ * A Member's way out, which for a Member is the same act as closing their
+ * account: there is no account without a Practice.
+ *
+ * What they wrote stays. Saying so here is not reassurance for its own sake
+ * — it is the one thing a Member hesitating over this button would want to
+ * know about the Owner they are leaving behind.
+ */
+function Leave() {
+  return (
+    <>
+      <p className="mt-2 text-gray-700">
+        Leaving removes you from this practice and from Launch Tasks — there
+        is nothing here without a practice. Anything you wrote on the list
+        stays with the practice.
+      </p>
+
+      <Form method="post" className="mt-4">
+        <input type="hidden" name="intent" value="leave" />
+        <button
+          type="submit"
+          className="rounded-md border border-error px-4 py-3 text-base font-medium text-error"
+        >
+          Leave this practice
+        </button>
+      </Form>
+    </>
   );
 }
 
@@ -379,33 +798,54 @@ function InviteSection({
   );
 }
 
-/**
- * A Member's way out, which for a Member is the same act as closing their
- * account: there is no account without a Practice.
- *
- * What they wrote stays. Saying so here is not reassurance for its own sake
- * — it is the one thing a Member hesitating over this button would want to
- * know about the Owner they are leaving behind.
- */
-function LeaveSection() {
+function Person({
+  person,
+  isYou,
+}: {
+  person: PersonInPractice;
+  isYou: boolean;
+}) {
   return (
-    <section className="mt-10">
-      <h3 className="text-lg font-semibold text-gray-900">Leave this practice</h3>
-      <p className="mt-2 text-gray-700">
-        Leaving removes you from this practice and from Launch Tasks — there
-        is nothing here without a practice. Anything you wrote on the list
-        stays with the practice.
+    <div>
+      {/* The name if there is one, and the address if there is not. */}
+      <p className="text-base text-gray-900">
+        {person.name ?? person.email}
+        {isYou && <span className="text-gray-500"> (you)</span>}
       </p>
+      <p className="text-sm text-gray-600">
+        {person.name ? `${person.email} — ` : ""}
+        {person.role === "owner" ? "Owner" : "Member"}
+      </p>
+    </div>
+  );
+}
 
-      <Form method="post" className="mt-4">
-        <input type="hidden" name="intent" value="leave" />
-        <button
-          type="submit"
-          className="rounded-md border border-error px-4 py-3 text-base font-medium text-error"
-        >
-          Leave this practice
-        </button>
-      </Form>
-    </section>
+function RemoveButton({ person }: { person: PersonInPractice }) {
+  return (
+    <Form method="post">
+      <input type="hidden" name="intent" value="remove-member" />
+      <input type="hidden" name="userId" value={person.userId} />
+      <button
+        type="submit"
+        className="rounded-md border border-gray-400 px-3 py-2 text-sm font-medium text-gray-900"
+      >
+        Remove
+      </button>
+    </Form>
+  );
+}
+
+function RevokeButton({ invitation }: { invitation: PendingInvite }) {
+  return (
+    <Form method="post">
+      <input type="hidden" name="intent" value="revoke-invite" />
+      <input type="hidden" name="inviteId" value={invitation.id} />
+      <button
+        type="submit"
+        className="rounded-md border border-gray-400 px-3 py-2 text-sm font-medium text-gray-900"
+      >
+        Withdraw
+      </button>
+    </Form>
   );
 }

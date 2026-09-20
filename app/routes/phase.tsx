@@ -170,7 +170,7 @@ export default function Phase({ loaderData }: Route.ComponentProps) {
               wording="done overall"
             />
             <Link to="/settings" className="text-sm text-gray-600 underline">
-              People
+              Settings
             </Link>
           </div>
         </div>
