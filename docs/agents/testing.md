@@ -64,6 +64,22 @@ ADR-0004's two mandatory tests live here: *request → email → verify → sess
 reads the Sign-in Link out of the fake sender and posts it, and the revocation
 test removes a Member and asserts their next request is unauthenticated.
 
+The dev tool that builds dummy Practices is tested here too, and could not be
+tested anywhere else: it *is* a caller of seam 1, pressing the same screens a
+physician does, so `test/dummy-practices.test.ts` hands it the harness as its
+browser and mailbox and then asserts on rows only the real paths can write —
+a Membership per person, 98 Task Entries, an Invite marked accepted, and a
+Practice Profile the Wizard put there.
+
+Two things in that file are not seam 1, and both are the tool's refusals
+rather than the product's behaviour. `productionSigns` is asserted directly:
+it is what keeps a tool that creates Practices, Users and Memberships away
+from real data, and it is a pure function over an environment and a file
+path that asks the product to do nothing. And the two refusals of a *run* —
+an unseeded database, and an environment that smells of production — call
+`runDummyPractices` against a database the harness cannot produce, since the
+harness always seeds. Neither is a seam, and neither is a precedent for one.
+
 ## 2. The outbound dependency boundary — Resend and Kit as injected clients
 
 `app/services/email-sender.ts`, `app/services/kit-client.ts`

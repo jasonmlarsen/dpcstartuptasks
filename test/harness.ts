@@ -8,6 +8,7 @@ import * as serverBuild from "virtual:react-router/server-build";
 
 import { ADMIN_ROLE } from "~/auth/server";
 import { createDatabase, type AppDatabase } from "~/database/database";
+import { CookieJar } from "~/dev/cookie-jar";
 import { user } from "~/database/schema";
 import { seed, TASK_LIBRARY_CSV_PATH } from "~/seed/seed";
 import { createServicesContext, type AppServices } from "~/services/services";
@@ -43,7 +44,7 @@ export interface TestApp {
   emailSender: FakeEmailSender;
   kitClient: FakeKitClient;
   /** Cookies the app has set so far, for asserting a session was established. */
-  cookies: Map<string, string>;
+  cookies: CookieJar;
   /** Drop the session without touching the database, to test a signed-out visit. */
   clearCookies(): void;
   /** Delete the temp database. Vitest calls this through `onTestFinished`. */
@@ -76,7 +77,10 @@ export function createTestApp(): TestApp {
   const services: AppServices = { database, emailSender, kitClient };
 
   const handler = createRequestHandler(serverBuild, "test");
-  const cookies = new Map<string, string>();
+  // The same jar the dev tool drives the product with, and deliberately not
+  // a second copy of it: deletion is the load-bearing half (ADR-0004's
+  // revocation test), and it should stop being true in one place or none.
+  const cookies = new CookieJar();
 
   async function fetch(
     input: string | URL | Request,
@@ -84,15 +88,14 @@ export function createTestApp(): TestApp {
   ): Promise<Response> {
     const request = toRequest(input, init);
 
-    if (cookies.size > 0) {
-      request.headers.set("Cookie", serialiseCookies(cookies));
-    }
+    const cookie = cookies.header();
+    if (cookie) request.headers.set("Cookie", cookie);
 
     // A fresh context per request: nothing a loader writes into it may leak
     // into the next request, exactly as in production.
     const response = await handler(request, createServicesContext(services));
 
-    absorbSetCookies(response, cookies);
+    cookies.absorb(response);
     return response;
   }
 
@@ -123,41 +126,6 @@ function toRequest(
     request.headers.set("Origin", url.origin);
   }
   return request;
-}
-
-function serialiseCookies(cookies: Map<string, string>): string {
-  return [...cookies]
-    .map(([name, value]) => `${name}=${value}`)
-    .join("; ");
-}
-
-/**
- * Keep the cookie jar in step with the response, deletions included: a
- * revocation test is only meaningful if clearing a cookie actually clears it.
- */
-function absorbSetCookies(response: Response, cookies: Map<string, string>) {
-  for (const header of response.headers.getSetCookie()) {
-    const [pair, ...attributes] = header.split(";");
-    const separator = pair.indexOf("=");
-    if (separator === -1) continue;
-
-    const name = pair.slice(0, separator).trim();
-    const value = pair.slice(separator + 1).trim();
-
-    const expired = attributes.some((attribute) => {
-      const [key, raw] = attribute.split("=");
-      const lowered = key.trim().toLowerCase();
-      if (lowered === "max-age") return Number(raw) <= 0;
-      if (lowered === "expires") return new Date(raw ?? "").getTime() <= Date.now();
-      return false;
-    });
-
-    if (expired || value === "") {
-      cookies.delete(name);
-    } else {
-      cookies.set(name, value);
-    }
-  }
 }
 
 /**

@@ -131,6 +131,44 @@ volume's file — the same shape as every other operator act here. Promoting an
 Admin is a SQL statement typed on the VPS, and discarding a database is `rm
 data/launch-tasks.sqlite`, typed on purpose. There is no screen for any of it.
 
+## Dummy Practices for development
+
+```sh
+npm run dev:practices                              # two Practices of three
+npm run dev:practices -- --practices 3 --label demo
+```
+
+The **second** script, and deliberately not a flag on the first. The Seed
+cannot create a Practice, a User or a Membership; this one creates all three,
+**through the real registration and invite paths** — the sign-in form, the
+Continue Screen, the Tailoring Wizard, the Owner's invite box and the
+acceptance screen — and never by writing a row. Going the long way round is
+the point: every development pass that wants an account re-exercises signup,
+invites, the three-person cap and the Wizard as a free smoke test, and each
+step checks what came back rather than assuming it worked.
+
+Each Practice is an Owner and two Members, plus a fourth address the cap is
+expected to refuse. Addresses are at `dummy.invalid`, which is reserved and
+undeliverable by definition. `--label` pins them, so a run's addresses are
+predictable — but a second run under the same label is the *same* Owners, who
+already have their Practices, and it will run out of Sign-in Links within the
+quarter hour. Leave it off to build new ones.
+
+Because it creates what the Seed cannot, it **refuses to run against
+production** before it opens anything, and the refusal lives in the tool
+rather than in this command. Four signs, any one of them enough, all named on
+the way out: `NODE_ENV=production`, an `APP_URL` that is not this machine, an
+`AUTH_SECRET` set at all (development needs none, production refuses to start
+without one), or a database file outside the checkout.
+
+Nothing delivers mail in development, so the run holds its own mailbox and
+prints every message it sends. It ends by minting one **unpressed** Sign-in
+Link per Owner: start the app with `npm run dev` and open one to enter the
+Practice it just built. Like every other, it lives ten minutes and works
+once. Five Practices is the most one run can build — everything in it presses
+Continue from one address, and beyond that the app's own rate limiting would
+refuse, so the tool says so up front instead.
+
 ## Signing in
 
 There is no password. A physician types an address, gets the same *check your
