@@ -2,6 +2,12 @@ import { data, Form, Link, redirect } from "react-router";
 
 import { requireAdmin } from "~/admin/admin-access";
 import {
+  feedbackForTask,
+  FINISH_FEEDBACK,
+  pressDone,
+  type FeedbackInInbox,
+} from "~/admin/feedback-inbox";
+import {
   addDependency,
   addHelpfulLink,
   moveHelpfulLink,
@@ -16,6 +22,7 @@ import {
   type EditableLink,
   type EditableTask,
 } from "~/admin/task-library";
+import { FeedbackRow } from "~/components/feedback-row";
 import { getServices } from "~/services/services";
 import type { Route } from "./+types/library-task";
 
@@ -49,7 +56,10 @@ export async function loader({ context, params, request }: Route.LoaderArgs) {
   const task = taskForEditing(services.database, Number(params.taskId));
   if (!task) throw data("No such task", { status: 404 });
 
-  return { task };
+  // The second door onto the same rows. It is on this screen rather than
+  // linked from it because the complaint and the fix are one act: the Admin
+  // reads *the SS-4 link is wrong* in the page where the SS-4 link is typed.
+  return { task, feedback: feedbackForTask(services.database, task.id) };
 }
 
 export async function action({ context, params, request }: Route.ActionArgs) {
@@ -163,6 +173,13 @@ export async function action({ context, params, request }: Route.ActionArgs) {
     throw redirect(here);
   }
 
+  if (intent === FINISH_FEEDBACK) {
+    const wrong = pressDone(services.database, submitted);
+    if (wrong) return { error: wrong };
+
+    throw redirect(here);
+  }
+
   if (intent === "remove-dependency") {
     removeDependency(
       services.database,
@@ -179,7 +196,7 @@ export default function AdminLibraryTask({
   loaderData,
   actionData,
 }: Route.ComponentProps) {
-  const { task } = loaderData;
+  const { task, feedback } = loaderData;
 
   return (
     <div className="space-y-8">
@@ -210,11 +227,47 @@ export default function AdminLibraryTask({
         </p>
       )}
 
+      {/* Above the Body, because it is the reason the Body is being opened
+          more often than not. */}
+      <FeedbackSection feedback={feedback} />
+
       <EditForm task={task} />
       <PublishingSection task={task} />
       <LinksSection task={task} />
       <DependenciesSection task={task} />
     </div>
+  );
+}
+
+/**
+ * What physicians said about this Task, New first.
+ *
+ * Done rows stay on the screen rather than dropping off it: an Admin who has
+ * just rewritten a Body wants to see what the last complaints about it were
+ * and what was done, and the one-line note is the only durable record of a
+ * content judgement the product keeps. Finishing one from here posts to this
+ * screen and comes back to it, so reading the complaint and typing the fix
+ * never costs a page of navigation.
+ */
+function FeedbackSection({ feedback }: { feedback: FeedbackInInbox[] }) {
+  return (
+    <section className="rounded-lg border border-gray-200 bg-white px-4 py-4">
+      <h3 className="text-sm font-semibold text-gray-900">Feedback</h3>
+
+      {feedback.length === 0 ? (
+        <p className="mt-1 text-sm text-gray-600">
+          No feedback has been sent about this task.
+        </p>
+      ) : (
+        <ul className="mt-3 divide-y divide-gray-100">
+          {feedback.map((one) => (
+            <li key={one.id} className="py-3">
+              <FeedbackRow feedback={one} namesTheTask={false} />
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
   );
 }
 

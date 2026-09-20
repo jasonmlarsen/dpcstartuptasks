@@ -632,11 +632,13 @@ export const FEEDBACK_PER_HOUR = 10;
  * Done, optionally with the one line recording what changed or why nothing
  * did. A nullable timestamp rather than a status column, for the reason
  * `retired_at` and `deleted_at` are: the state *is* the fact of the moment,
- * and there is no third value for a column to hold. The Admin's side of
- * this — the queue, the Done press, the digest — is a later ticket; a row
- * is created New and nothing here writes the other state yet.
+ * and there is no third value for a column to hold. A row is created New,
+ * and the admin panel's Feedback section is the only thing that writes the
+ * other state; the digest that reads them is still a later ticket.
  *
- * Both foreign keys cascade, which is how Purge takes Feedback (ADR-0007).
+ * The Practice foreign key cascades, which is how Purge takes Feedback
+ * (ADR-0007); the author's is `set null`, because losing one person's
+ * account may never take the row.
  * Sever-and-keep was rejected: free text names its own author, so a row
  * stripped of its FKs would be de-identified only in the schema.
  */
@@ -689,7 +691,7 @@ export const feedback = sqliteTable(
      * the row still says what the physician was reading.
      */
     taskTitle: text("task_title"),
-    /** Null is New. Set is Done, which is the Admin's act and a later ticket. */
+    /** Null is New. Set is Done, which is the Admin's act and never undone. */
     doneAt: integer("done_at", { mode: "timestamp" }),
     /** The one line on Done: what changed, or why nothing did. */
     doneNote: text("done_note"),

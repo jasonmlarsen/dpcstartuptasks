@@ -38,7 +38,7 @@ export type RefusedFeedback =
 
 /** What the Send press did. */
 export type SentFeedback =
-  /** Stored, and New. Done is the Admin's act and a later ticket. */
+  /** Stored, and New. Done is the Admin's act, in the admin panel. */
   | { outcome: "sent" }
   | RefusedFeedback;
 
