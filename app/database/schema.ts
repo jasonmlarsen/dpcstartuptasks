@@ -634,7 +634,7 @@ export const FEEDBACK_PER_HOUR = 10;
  * `retired_at` and `deleted_at` are: the state *is* the fact of the moment,
  * and there is no third value for a column to hold. A row is created New,
  * and the admin panel's Feedback section is the only thing that writes the
- * other state; the digest that reads them is still a later ticket.
+ * other state; the daily digest reads them and writes nothing here.
  *
  * The Practice foreign key cascades, which is how Purge takes Feedback
  * (ADR-0007); the author's is `set null`, because losing one person's
@@ -706,3 +706,41 @@ export const feedback = sqliteTable(
     index("feedback_author_idx").on(table.authorUserId, table.createdAt),
   ],
 );
+
+/**
+ * One Feedback Digest that was sent: the mark that says where the next one
+ * starts.
+ *
+ * A digest is defined by a window — *everything that arrived since the last
+ * one* — and a window needs a far edge that outlives the process, because the
+ * worker is started fresh by a scheduler every day and remembers nothing. A
+ * row is written here only after Resend has taken the message, so a send that
+ * fails leaves the window open and the next digest carries those Feedback
+ * instead of losing them.
+ *
+ * The edge is a **Feedback id and not a timestamp**. `created_at` is whole
+ * seconds, so a Feedback written in the same second the digest was assembled
+ * would sit exactly on a timestamp edge and have to be either sent twice or
+ * dropped; ids are strictly increasing and never tie, so `id > through` is a
+ * window with no seam. A digest is never sent empty, so no row here ever
+ * records an email that carried nothing.
+ */
+export const feedbackDigest = sqliteTable("feedback_digest", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  /**
+   * The highest Feedback id this digest carried, and the low edge of the next
+   * one. Not a foreign key: the Feedback it names is destroyed by the Purge of
+   * its Practice (ADR-0007), and the mark has to survive that — the window
+   * moved on whether or not the row that set it still exists.
+   */
+  throughFeedbackId: integer("through_feedback_id").notNull(),
+  /**
+   * When it went. Nothing reads it — the window is the mark above, and one
+   * digest is told from the next by that alone — but a row saying only
+   * *through 41* answers no question an operator would ever ask it, and the
+   * column costs a default.
+   */
+  sentAt: integer("sent_at", { mode: "timestamp" })
+    .notNull()
+    .default(sql`(unixepoch())`),
+});

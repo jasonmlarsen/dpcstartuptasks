@@ -1,4 +1,4 @@
-import { and, desc, eq, isNotNull, isNull, sql, type SQL } from "drizzle-orm";
+import { and, desc, eq, gt, isNotNull, isNull, sql, type SQL } from "drizzle-orm";
 
 import type { AppDatabase } from "~/database/database";
 import { feedback, globalTask, user } from "~/database/schema";
@@ -135,6 +135,22 @@ export function feedbackInbox(
   showing: FeedbackShowing,
 ): FeedbackInInbox[] {
   return rows(database, only(showing));
+}
+
+/**
+ * Everything that arrived after a given Feedback, newest first.
+ *
+ * The Feedback Digest's window, read here rather than in the worker because
+ * it is the same read the inbox does — same left join, same order, same
+ * shape — and a second definition of *what a Feedback looks like to the
+ * Admin* would be free to drift from this one. The edge is an id: whole
+ * seconds tie, ids never do.
+ */
+export function feedbackArrivedAfter(
+  database: AppDatabase,
+  afterFeedbackId: number,
+): FeedbackInInbox[] {
+  return rows(database, gt(feedback.id, afterFeedbackId));
 }
 
 /** How many are waiting, which is the number the section is named by. */

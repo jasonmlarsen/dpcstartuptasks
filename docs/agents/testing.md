@@ -95,7 +95,16 @@ Tests here assert on rows and on what the Kit fake received: cancelled → outco
 `subscriber.id` → deferred; the percent-encoded address on the read; Purge takes
 Feedback and every User including the Owner; the digest is never sent empty.
 
-*Not yet built — the worker is a later ticket. Build it to this shape.*
+`sendFeedbackDigest(database, emailSender, now)` in
+`app/admin/feedback-digest.ts` is the first of the three and the shape the
+other two are built to: dependencies as arguments, `now` among them, and no
+request anywhere near it. Its test arranges through seam 1 — the Feedback it
+carries is sent through the real box — and acts by calling the function, which
+is the division to keep: **a worker test still asserts on what a physician
+put there**, not on rows it wrote itself.
+
+*`drainQueue` and the day-30 Purge are later tickets. Build them to this
+shape.*
 
 ## 4. The Seed Script seam — `seed(db, csvPath)`, with the CLI as a thin wrapper
 

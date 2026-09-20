@@ -5,6 +5,7 @@ import { and, desc, eq, gt, isNull } from "drizzle-orm";
 import { setDisplayName, type SignedInUser } from "~/auth/server";
 import { appUrl } from "~/auth/config";
 import type { AppDatabase, AppWriter } from "~/database/database";
+import { escapeHtml } from "~/lib/escape-html";
 import {
   customTask,
   invite,
@@ -453,7 +454,7 @@ function tokenDigest(token: string): string {
 }
 
 /**
- * The second and last transactional email in v1.
+ * The Invite email: one of the two a physician is ever sent.
  *
  * From a person and a clinic, which is why the Owner is asked for both names
  * at the moment they first invite someone. It says what the link does, since
@@ -502,12 +503,4 @@ function inviteEmail({
       "<p>If you were not expecting this, you can ignore this email.</p>",
     ].join("\n"),
   };
-}
-
-function escapeHtml(text: string): string {
-  return text
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;");
 }
