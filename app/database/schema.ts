@@ -66,6 +66,19 @@ export const globalTask = sqliteTable("global_task", {
   position: integer("position").notNull(),
   /** Null means Draft: no Practice has a Task Entry for it. A Seed always sets it. */
   publishedAt: integer("published_at", { mode: "timestamp" }),
+  /**
+   * Null means live. Set means Retired: withdrawn from the Task Library, and
+   * never deleted, because Practices have Task Entries against it and may
+   * already have done the work.
+   *
+   * Nullable rather than a state column so that un-retiring is the same
+   * backfill as publishing, which is what makes retire-and-replace a safe
+   * editing move. The Admin's act of Retiring — which hard-deletes the
+   * Entries of Practices that did nothing with it — belongs to the admin
+   * panel; what this column drives here is the reading: a Practice that kept
+   * its Entry still sees the Task, labelled `No longer required`.
+   */
+  retiredAt: integer("retired_at", { mode: "timestamp" }),
 });
 
 /**

@@ -1,0 +1,1 @@
+ALTER TABLE `global_task` ADD `retired_at` integer;

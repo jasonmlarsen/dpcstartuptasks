@@ -169,3 +169,33 @@
 .body-prose td {
   @apply border-b border-gray-200 py-1 pr-3;
 }
+
+/* The landing flash: 900ms on the card that just moved, and nothing else on
+   the screen. Auto-sort means the card a physician pressed is rarely where
+   they left it, so the flash is what keeps the move legible instead of
+   startling. It is a class the server put on the card — the Status change is
+   a form post, so there is no client JS here to depend on.
+
+   Reduced motion drops the animation rather than replacing it: the card is
+   still the only one with a tinted background on arrival, so the answer to
+   *where did it go* survives without anything moving. */
+/* A tint of the token rather than the token itself: the card keeps its own
+   text on it throughout, so the flash has to read as the card lighting up
+   and never as a different card. */
+@keyframes task-landing-flash {
+  from {
+    background-color: color-mix(in srgb, var(--primary-light) 18%, var(--white));
+  }
+  to {
+    background-color: var(--white);
+  }
+}
+.task-landed {
+  animation: task-landing-flash 900ms ease-out;
+}
+@media (prefers-reduced-motion: reduce) {
+  .task-landed {
+    animation: none;
+    background-color: color-mix(in srgb, var(--primary-light) 18%, var(--white));
+  }
+}

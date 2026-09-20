@@ -1,15 +1,17 @@
-import { data, Link } from "react-router";
+import { data, Form, Link, redirect } from "react-router";
 
-import type { TaskStatus } from "~/database/schema";
+import { TASK_STATUSES, type TaskStatus } from "~/database/schema";
 import {
   journeyMap,
   type DependencyAdvice,
   type HelpfulLinkView,
   type JourneyCard,
   type OpenTaskView,
+  type Progress,
   type RailPhase,
 } from "~/practice/journey-map";
 import { requireCurrentPractice } from "~/practice/signed-in-practice";
+import { asTaskStatus, setTaskStatus } from "~/practice/task-status";
 import { getServices } from "~/services/services";
 import type { Route } from "./+types/phase";
 
@@ -21,22 +23,62 @@ export function meta({ loaderData }: Route.MetaArgs) {
 /**
  * The journey map: one Phase of the list, and the Task that is open.
  *
- * Read-only in this slice. The Status control arrives with the next ticket,
- * and nothing here is ever locked — a physician who already holds an EIN can
- * be anywhere in the list on day one, because no Task knows or cares what
- * the ones above it say.
+ * Nothing here is ever locked — a physician who already holds an EIN can be
+ * anywhere in the list on day one, because no Task knows or cares what the
+ * ones above it say.
  */
 export async function loader({ context, params, request }: Route.LoaderArgs) {
   const services = getServices(context);
   const practice = await requireCurrentPractice(services, request);
 
+  const parameters = new URL(request.url).searchParams;
   const map = journeyMap(services.database, practice, {
     phaseSlug: params.phaseSlug,
-    taskRef: new URL(request.url).searchParams.get("task"),
+    taskRef: parameters.get("task"),
+    movedRef: parameters.get("moved"),
   });
   if (!map) throw data("No such phase", { status: 404 });
 
   return { practiceName: practice.name, map };
+}
+
+/**
+ * A Status change: a plain form post, and the only write this screen makes.
+ *
+ * The answer to the press is the list itself. The physician is redirected
+ * back to the Phase with the drawer closed and `?moved=` naming the card
+ * they touched, so what they see next is the card in its new place, flashing
+ * — which is the whole point of live auto-sort, and impossible to see from
+ * behind an open drawer on a phone.
+ *
+ * A redirect rather than a rendered response for the ordinary reason too: a
+ * reload should not re-post a Status.
+ *
+ * `?moved=` outlives the moment it describes: reloading that address plays
+ * the flash again on a card that has not moved since. Accepted — the
+ * alternative is a flash message in a cookie or a timestamp in the URL, and
+ * neither is worth a round trip through the session for 900ms of colour on
+ * a card the physician is already looking at.
+ */
+export async function action({ context, params, request }: Route.ActionArgs) {
+  const services = getServices(context);
+  const practice = await requireCurrentPractice(services, request);
+
+  const submitted = await request.formData();
+  const taskRef = String(submitted.get("taskRef") ?? "");
+  const status = asTaskStatus(submitted.get("status"));
+  if (!status) throw data("No such status", { status: 400 });
+
+  // False covers every way a ref can name nothing this Practice may set —
+  // another Practice's Custom Task, a Draft, a Retired Task, a typo — and
+  // they get the one answer, because they are the one answer.
+  if (!setTaskStatus(services.database, practice, { taskRef, status })) {
+    throw data("No such task", { status: 404 });
+  }
+
+  throw redirect(
+    `/tasks/${params.phaseSlug}?moved=${encodeURIComponent(taskRef)}`,
+  );
 }
 
 export default function Phase({ loaderData }: Route.ComponentProps) {
@@ -49,9 +91,10 @@ export default function Phase({ loaderData }: Route.ComponentProps) {
           <h1 className="text-lg font-semibold text-gray-900">
             {practiceName ?? "Your practice"}
           </h1>
-          <p className="text-sm text-gray-500">
-            {map.cards.length} tasks in this phase
-          </p>
+          <ProgressLine
+            progress={map.listProgress}
+            wording="done overall"
+          />
         </div>
       </header>
 
@@ -61,6 +104,10 @@ export default function Phase({ loaderData }: Route.ComponentProps) {
         <h2 className="pt-6 text-2xl font-bold text-gray-900">
           {map.phaseName}
         </h2>
+        <ProgressLine
+          progress={map.phaseProgress}
+          wording="done in this phase"
+        />
 
         <ul className="mt-4 space-y-3">
           {map.cards.map((card) => (
@@ -74,6 +121,48 @@ export default function Phase({ loaderData }: Route.ComponentProps) {
       {map.openTask && (
         <TaskDrawer task={map.openTask} phaseSlug={map.phaseSlug} />
       )}
+    </div>
+  );
+}
+
+/**
+ * How far this Practice has got, counted twice: over the Phase in view, and
+ * over the whole list.
+ *
+ * A number and a bar, and no percentage — *3 of 8* is the sentence a
+ * physician would say out loud, and it is the one that makes a short Phase
+ * feel short. Not Applicable and `No longer required` are in neither half of
+ * it, which is what lets a list that has been honestly tailored read as
+ * finished when it is finished.
+ */
+function ProgressLine({
+  progress,
+  wording,
+}: {
+  progress: Progress;
+  wording: string;
+}) {
+  const { done, total } = progress;
+  const portion = total === 0 ? 0 : Math.round((done / total) * 100);
+
+  return (
+    <div className="flex items-center gap-3">
+      <p className="text-sm text-gray-500">
+        {done} of {total} {wording}
+      </p>
+      <div
+        role="progressbar"
+        aria-valuenow={done}
+        aria-valuemin={0}
+        aria-valuemax={total}
+        aria-label={wording}
+        className="h-1.5 w-24 overflow-hidden rounded-full bg-gray-200"
+      >
+        <div
+          className="h-full rounded-full bg-primary"
+          style={{ width: `${portion}%` }}
+        />
+      </div>
     </div>
   );
 }
@@ -121,15 +210,18 @@ function PhaseRail({ rail }: { rail: RailPhase[] }) {
  * Wizard that set it aside or the Practice itself.
  */
 function TaskCard({ card, phaseSlug }: { card: JourneyCard; phaseSlug: string }) {
-  const setAside = card.status === "not_applicable";
+  const setAside = card.status === "not_applicable" || card.retired;
 
   return (
     <Link
       to={`/tasks/${phaseSlug}?task=${encodeURIComponent(card.ref)}`}
       preventScrollReset
+      // The landing flash, which is 900ms of CSS and no JavaScript: the card
+      // the physician just touched says where it went, so a list that
+      // re-sorted itself underneath them never loses it.
       className={`block rounded-lg border bg-white px-4 py-3 ${
         card.open ? "border-primary" : "border-gray-200"
-      } ${setAside ? "opacity-60" : ""}`}
+      } ${setAside ? "opacity-60" : ""} ${card.landed ? "task-landed" : ""}`}
     >
       <div className="flex items-baseline justify-between gap-3">
         <span
@@ -137,7 +229,7 @@ function TaskCard({ card, phaseSlug }: { card: JourneyCard; phaseSlug: string })
         >
           {card.title}
         </span>
-        <StatusLabel status={card.status} />
+        <StatusLabel status={card.status} retired={card.retired} />
       </div>
 
       {card.snippet !== null && (
@@ -156,18 +248,31 @@ function TaskCard({ card, phaseSlug }: { card: JourneyCard; phaseSlug: string })
   );
 }
 
-/** Where the Practice has got to, said quietly. Read-only until the next ticket. */
-function StatusLabel({ status }: { status: TaskStatus }) {
+/**
+ * Where the Practice has got to, said quietly.
+ *
+ * `No longer required` outranks the Status: once the Admin has Retired a
+ * Task, what the Practice last said about it is no longer the thing worth
+ * reading on the row.
+ */
+function StatusLabel({
+  status,
+  retired,
+}: {
+  status: TaskStatus;
+  retired: boolean;
+}) {
+  if (retired) {
+    return (
+      <span className="shrink-0 text-xs text-gray-500">No longer required</span>
+    );
+  }
   if (status === "not_started") return null;
 
-  const wording: Record<Exclude<TaskStatus, "not_started">, string> = {
-    in_progress: "In progress",
-    done: "Done",
-    not_applicable: "Not applicable",
-  };
-
   return (
-    <span className="shrink-0 text-xs text-gray-500">{wording[status]}</span>
+    <span className="shrink-0 text-xs text-gray-500">
+      {STATUS_WORDING[status]}
+    </span>
   );
 }
 
@@ -257,10 +362,19 @@ function TaskDrawer({
           )}
         </div>
 
-        {/* The footer the Status control lands in next ticket. Its padding
-            clears the home indicator, so the last thing on the sheet is never
-            half under it. */}
+        {/* The Status control lives here, in the footer, whose padding clears
+            the home indicator — so the one thing a physician came to press is
+            never half under it on a phone. */}
         <div className="border-t border-gray-200 px-6 pt-4 pb-[calc(env(safe-area-inset-bottom)+1rem)]">
+          {task.retired ? (
+            <p className="mb-3 text-sm text-gray-500">
+              No longer required. This task has been withdrawn from the list,
+              and counts neither way towards your progress.
+            </p>
+          ) : (
+            <StatusControl task={task} phaseSlug={phaseSlug} />
+          )}
+
           <Link
             to={closed}
             preventScrollReset
@@ -273,6 +387,68 @@ function TaskDrawer({
     </>
   );
 }
+
+/**
+ * The Status control: four buttons, one press each.
+ *
+ * A form posting to the Phase's own action at zero client JS, which is what
+ * makes the whole path testable by dispatching a `Request` — and what makes
+ * it work at all in a clinic corridor on a bad connection.
+ *
+ * Four buttons rather than a select and a Save, because a Status change is
+ * one decision and should cost one press. The current one is marked with
+ * `aria-pressed` and stays pressable: re-pressing it writes the same value,
+ * which is a cheaper answer than reasoning about a disabled control.
+ *
+ * A Retired Task never renders this — un-retiring is the Admin's act — and
+ * `setTaskStatus` refuses one as well, so the absent control is a courtesy
+ * rather than the enforcement.
+ */
+function StatusControl({
+  task,
+  phaseSlug,
+}: {
+  task: OpenTaskView;
+  phaseSlug: string;
+}) {
+  return (
+    <Form method="post" action={`/tasks/${phaseSlug}`} className="mb-4">
+      <input type="hidden" name="taskRef" value={task.ref} />
+
+      <fieldset>
+        <legend className="mb-2 text-sm font-semibold text-gray-900">
+          Status
+        </legend>
+        <div className="grid grid-cols-2 gap-2">
+          {TASK_STATUSES.map((status) => (
+            <button
+              key={status}
+              type="submit"
+              name="status"
+              value={status}
+              aria-pressed={status === task.status}
+              className={
+                status === task.status
+                  ? "rounded-md bg-primary px-3 py-2 text-sm font-medium text-white"
+                  : "rounded-md border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700"
+              }
+            >
+              {STATUS_WORDING[status]}
+            </button>
+          ))}
+        </div>
+      </fieldset>
+    </Form>
+  );
+}
+
+/** One spelling of the four Statuses, for the control and the row alike. */
+const STATUS_WORDING: Record<TaskStatus, string> = {
+  not_started: "Not started",
+  in_progress: "In progress",
+  done: "Done",
+  not_applicable: "Not applicable",
+};
 
 /** Advice, in the one sentence it is allowed to be. */
 function DependencySentence({ dependency }: { dependency: DependencyAdvice }) {

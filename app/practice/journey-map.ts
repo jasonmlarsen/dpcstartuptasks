@@ -24,9 +24,18 @@ import type { CurrentPractice } from "./practice";
  * Everything the screen renders comes out of the one call at the bottom of
  * this file. That is ADR-0003's merge point — the Global Tasks a Practice has
  * a Task Entry for and the Custom Tasks it wrote itself are two tables until
- * here, and one list afterwards — and it is deliberately the only place the
- * two are brought together, because the ADR's cheap-merge argument rests on
- * there being exactly one such read path.
+ * here, and one list afterwards — and this file is deliberately the only
+ * place the two are brought together, because the ADR's cheap-merge argument
+ * rests on there being exactly one such read path.
+ *
+ * Whole-list progress is the second merge in this file, and ADR-0003 names
+ * that moment: "If a screen ever needs all 98 Tasks at once … the merge has
+ * to be written a second time. That is the point at which this decision is
+ * worth re-examining, and the only one." It is written here rather than
+ * anywhere else so the re-examination has one place to happen, and it counts
+ * two statuses rather than building 98 cards — it needs the tally, not the
+ * list. Re-open the ADR if a third caller appears, or if this one ever needs
+ * the Tasks themselves.
  *
  * Like `practice.ts`, nothing here takes a Practice id from a caller: a
  * `CurrentPractice` is what `practiceFor` handed back for the signed-in User,
@@ -53,8 +62,16 @@ export interface JourneyCard {
    */
   snippet: string | null;
   status: TaskStatus;
+  /**
+   * A Retired Task the Practice had already touched, which renders exactly
+   * as a Not Applicable one does and is labelled `No longer required`. It
+   * carries no Status control: un-retiring is the Admin's act.
+   */
+  retired: boolean;
   variesByState: boolean;
   open: boolean;
+  /** The card that just moved, which flashes where it landed for 900ms. */
+  landed: boolean;
 }
 
 /**
@@ -88,8 +105,22 @@ export interface OpenTaskView {
   /** Sanitized HTML, not Markdown. See `app/lib/markdown.ts`. */
   bodyHtml: string;
   status: TaskStatus;
+  /** Retired, so the drawer reads `No longer required` and offers no control. */
+  retired: boolean;
   helpfulLinks: HelpfulLinkView[];
   dependencies: DependencyAdvice[];
+}
+
+/**
+ * How far a Practice has got, over some set of its Tasks.
+ *
+ * Not Applicable and `No longer required` are in neither number: a Task a
+ * Practice will never do is not work outstanding, and counting it would make
+ * an honestly finished list read as unfinished.
+ */
+export interface Progress {
+  done: number;
+  total: number;
 }
 
 export interface JourneyMap {
@@ -97,6 +128,10 @@ export interface JourneyMap {
   phaseName: string;
   phaseSlug: string;
   cards: JourneyCard[];
+  /** The Phase in view, which is the work in front of the physician. */
+  phaseProgress: Progress;
+  /** The whole list, which is the question they actually asked. */
+  listProgress: Progress;
   /** Null when nothing is open, and when `?task=` names nothing this Practice has. */
   openTask: OpenTaskView | null;
 }
@@ -145,7 +180,7 @@ export function firstPhaseSlug(database: AppDatabase): string | null {
 export function journeyMap(
   database: AppDatabase,
   practice: CurrentPractice,
-  view: { phaseSlug: string; taskRef: string | null },
+  view: { phaseSlug: string; taskRef: string | null; movedRef?: string | null },
 ): JourneyMap | null {
   const phases = database
     .select({ id: phase.id, name: phase.name })
@@ -172,12 +207,15 @@ export function journeyMap(
     cards: cards.map((task) => ({
       ref: task.ref,
       title: task.title,
-      snippet:
-        task.status === "not_applicable" ? null : bodyAsPlainText(task.body),
+      snippet: setAside(task) ? null : bodyAsPlainText(task.body),
       status: task.status,
+      retired: isRetired(task),
       variesByState: task.kind === "global" && task.stateSpecific,
       open: task.ref === view.taskRef,
+      landed: task.ref === view.movedRef,
     })),
+    phaseProgress: progressOver(cards),
+    listProgress: listProgress(database, practice),
     openTask: view.taskRef
       ? openTask(database, practice, cards, view.taskRef, inView.name)
       : null,
@@ -210,6 +248,8 @@ interface MergedGlobalTask extends MergedTaskShared {
   stateSpecific: boolean;
   /** Its editorial place inside the Phase, stored rather than derived. */
   position: number;
+  /** Set once the Admin has Retired it. Null for every live Task. */
+  retiredAt: Date | null;
 }
 
 interface MergedCustomTask extends MergedTaskShared {
@@ -230,6 +270,7 @@ function readGlobalTasks(
       body: globalTask.body,
       stateSpecific: globalTask.stateSpecific,
       position: globalTask.position,
+      retiredAt: globalTask.retiredAt,
       status: taskEntry.status,
     })
     .from(taskEntry)
@@ -253,6 +294,7 @@ function readGlobalTasks(
       status: row.status,
       stateSpecific: row.stateSpecific,
       position: row.position,
+      retiredAt: row.retiredAt,
     }));
 }
 
@@ -306,7 +348,7 @@ function customRef(id: number): string {
  * coexist with a list that re-sorts itself the moment a Status changes.
  */
 function byStatusThenLibraryOrder(left: MergedTask, right: MergedTask): number {
-  const byStatus = STATUS_ORDER[left.status] - STATUS_ORDER[right.status];
+  const byStatus = sortBucket(left) - sortBucket(right);
   if (byStatus !== 0) return byStatus;
 
   if (left.kind === "global" && right.kind === "global") {
@@ -316,6 +358,98 @@ function byStatusThenLibraryOrder(left: MergedTask, right: MergedTask): number {
     return left.createdAt.getTime() - right.createdAt.getTime();
   }
   return left.kind === "global" ? -1 : 1;
+}
+
+/** A Retired Task: withdrawn from the Library, and kept because this Practice touched it. */
+function isRetired(task: MergedTask): boolean {
+  return task.kind === "global" && task.retiredAt !== null;
+}
+
+/**
+ * A Task that is off this Practice's list, either way it got there.
+ *
+ * Not Applicable and `No longer required` render identically — dimmed to the
+ * title alone, at the bottom of the Phase — and count neither way towards
+ * progress. One predicate for both, taking the two fields rather than a
+ * whole Task so that the Phase in view and the whole-list tally cannot spell
+ * the rule out differently.
+ */
+function offTheList(task: { status: TaskStatus; retired: boolean }): boolean {
+  return task.status === "not_applicable" || task.retired;
+}
+
+/** The same question, asked of a Task on its way to becoming a card. */
+function setAside(task: MergedTask): boolean {
+  return offTheList({ status: task.status, retired: isRetired(task) });
+}
+
+/**
+ * Which of the four bands a Task sorts into within its Phase.
+ *
+ * Four, not five: a Retired Task sorts where a Not Applicable one does,
+ * because it is *rendered exactly as a Not Applicable Task is* (CONTEXT.md)
+ * and whatever Status the Practice last gave it has stopped being the thing
+ * worth reading. A fifth band is the shape ADR-0002 rejected — "it adds a
+ * fifth bucket to the list's sort order, a second thing that renders
+ * differently" — and there is no reason to buy it back here.
+ */
+function sortBucket(task: MergedTask): number {
+  return STATUS_ORDER[isRetired(task) ? "not_applicable" : task.status];
+}
+
+/** Done out of what is still being asked for, over any set of Tasks. */
+function progressOver(tasks: MergedTask[]): Progress {
+  const counted = tasks.filter((task) => !setAside(task));
+
+  return {
+    done: counted.filter((task) => task.status === "done").length,
+    total: counted.length,
+  };
+}
+
+/**
+ * The same count over the whole list rather than the Phase in view.
+ *
+ * Read here rather than summed from eleven journey maps: the physician asked
+ * one question — how far am I? — and it is one query over the Task Entries
+ * and the Practice's own Tasks. A Retired Task whose Entry the Admin deleted
+ * is not in it at all, and one the Practice had touched is in it and
+ * uncounted, which are the same answer arrived at two ways.
+ */
+function listProgress(
+  database: AppDatabase,
+  practice: CurrentPractice,
+): Progress {
+  const globals = database
+    .select({ status: taskEntry.status, retiredAt: globalTask.retiredAt })
+    .from(taskEntry)
+    .innerJoin(globalTask, eq(taskEntry.globalTaskId, globalTask.id))
+    .where(
+      and(
+        eq(taskEntry.practiceId, practice.id),
+        isNotNull(globalTask.publishedAt),
+      ),
+    )
+    .all()
+    .map((row) => ({ status: row.status, retired: row.retiredAt !== null }));
+
+  const customs = database
+    .select({ status: customTask.status })
+    .from(customTask)
+    .where(eq(customTask.practiceId, practice.id))
+    .all()
+    // A Custom Task belongs to the Practice that wrote it, and the Admin has
+    // no reach into it: there is nobody who could Retire one.
+    .map((row) => ({ status: row.status, retired: false }));
+
+  const counted = [...globals, ...customs].filter(
+    (row) => !offTheList(row),
+  );
+
+  return {
+    done: counted.filter((row) => row.status === "done").length,
+    total: counted.length,
+  };
 }
 
 /**
@@ -346,6 +480,7 @@ function openTask(
         ? renderGlobalBody(task.body)
         : renderPracticeBody(task.body),
     status: task.status,
+    retired: isRetired(task),
     // A Custom Task has neither, and never will without a schema change:
     // Helpful Links and Dependencies are editorial acts, and a physician is
     // not an editor (ADR-0003).
