@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 
 import type { AppDatabase } from "~/database/database";
-import { membership, practice } from "~/database/schema";
+import { membership, practice, type PracticeState } from "~/database/schema";
 
 /**
  * Reading a Practice, always through the User who is signed in.
@@ -18,6 +18,14 @@ export interface CurrentPractice {
   /** Null until the Owner names it. Callers render a fallback, never a blank. */
   name: string | null;
   role: "owner" | "member";
+  /**
+   * What the Practice told the Tailoring Wizard about where it practises,
+   * and null if it never said. The one part of the Practice Profile with a
+   * reader: it turns the journey map's `Varies by state` pill from a warning
+   * into a pointer. It is not per-state content and never becomes it —
+   * stale state law is worse than none.
+   */
+  state: PracticeState | null;
 }
 
 /** The one Practice this User belongs to, or nobody's. */
@@ -30,6 +38,7 @@ export function practiceFor(
       id: practice.id,
       name: practice.name,
       role: membership.role,
+      state: practice.state,
     })
     .from(membership)
     .innerJoin(practice, eq(membership.practiceId, practice.id))

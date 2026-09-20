@@ -11,6 +11,11 @@ export default [
   route("check-your-email", "routes/check-your-email.tsx"),
   route("continue", "routes/continue.tsx"),
 
+  // The Tailoring Wizard, which sits in front of the journey map exactly
+  // once per Practice. A path rather than a query on `/tasks`, so that being
+  // owed it is a redirect a test and a browser can both see.
+  route("welcome", "routes/welcome.tsx"),
+
   // The journey map. The Phase in view is the URL, and so is the Task whose
   // drawer is open, so nothing about where a physician is reading lives in a
   // cookie or in a column.

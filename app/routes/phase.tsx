@@ -11,7 +11,7 @@ import {
   type Progress,
   type RailPhase,
 } from "~/practice/journey-map";
-import { requireCurrentPractice } from "~/practice/signed-in-practice";
+import { requirePracticeForList } from "~/practice/signed-in-practice";
 import { asTargetDate, setTaskNote } from "~/practice/task-note";
 import { asTaskStatus, setTaskStatus } from "~/practice/task-status";
 import { getServices } from "~/services/services";
@@ -31,7 +31,7 @@ export function meta({ loaderData }: Route.MetaArgs) {
  */
 export async function loader({ context, params, request }: Route.LoaderArgs) {
   const services = getServices(context);
-  const practice = await requireCurrentPractice(services, request);
+  const practice = await requirePracticeForList(services, request);
 
   const parameters = new URL(request.url).searchParams;
   const map = journeyMap(services.database, practice, {
@@ -82,7 +82,7 @@ export async function loader({ context, params, request }: Route.LoaderArgs) {
  */
 export async function action({ context, params, request }: Route.ActionArgs) {
   const services = getServices(context);
-  const practice = await requireCurrentPractice(services, request);
+  const practice = await requirePracticeForList(services, request);
 
   const submitted = await request.formData();
   const taskRef = String(submitted.get("taskRef") ?? "");
@@ -317,9 +317,9 @@ function TaskCard({ card, phaseSlug }: { card: JourneyCard; phaseSlug: string })
             {card.snippet}
           </p>
           <div className="mt-2 flex items-baseline gap-3">
-            {card.variesByState && (
+            {card.stateNote && (
               <p className="inline-block rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-500">
-                Varies by state
+                {card.stateNote}
               </p>
             )}
             {/* The date the Practice is aiming at, said and not enforced:

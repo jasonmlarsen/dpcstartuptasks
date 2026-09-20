@@ -1,7 +1,7 @@
 import { data, redirect } from "react-router";
 
 import { firstPhaseSlug } from "~/practice/journey-map";
-import { requireCurrentPractice } from "~/practice/signed-in-practice";
+import { requirePracticeForList } from "~/practice/signed-in-practice";
 import { getServices } from "~/services/services";
 import type { Route } from "./+types/tasks";
 
@@ -15,7 +15,7 @@ import type { Route } from "./+types/tasks";
  */
 export async function loader({ context, request }: Route.LoaderArgs) {
   const services = getServices(context);
-  await requireCurrentPractice(services, request);
+  await requirePracticeForList(services, request);
 
   const first = firstPhaseSlug(services.database);
   // No Phases means an unseeded database, and there is no list to send

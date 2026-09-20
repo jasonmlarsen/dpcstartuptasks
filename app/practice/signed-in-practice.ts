@@ -3,6 +3,7 @@ import { redirect } from "react-router";
 import { getSignedInUser } from "~/auth/server";
 import type { AppServices } from "~/services/services";
 import { practiceFor, type CurrentPractice } from "./practice";
+import { tailoringOwed } from "./tailoring";
 
 /**
  * The two lines every page behind the door begins with, in one place.
@@ -41,6 +42,30 @@ export async function requireCurrentPractice(
 
   const practice = practiceFor(services.database, signedInUser.id);
   if (!practice) throw redirect("/");
+
+  return practice;
+}
+
+/**
+ * The same again, for the two screens that are the list itself.
+ *
+ * The Tailoring Wizard sits in front of the journey map and nowhere else, so
+ * the gate is here rather than on the Continue press: closing the tab
+ * half-way through is not an answer, and a Wizard that were owed only at the
+ * moment of signing in would be lost by anyone who did. It is owed until it
+ * is answered or skipped, and it is asked at the one door it belongs in
+ * front of.
+ *
+ * A Member and a Practice already in flight never meet it — `tailoringOwed`
+ * is where that is decided, and this function has no opinion of its own.
+ */
+export async function requirePracticeForList(
+  services: AppServices,
+  request: Request,
+): Promise<CurrentPractice> {
+  const practice = await requireCurrentPractice(services, request);
+
+  if (tailoringOwed(services.database, practice)) throw redirect("/welcome");
 
   return practice;
 }

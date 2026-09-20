@@ -69,7 +69,14 @@ export interface JourneyCard {
    * carries no Status control: un-retiring is the Admin's act.
    */
   retired: boolean;
-  variesByState: boolean;
+  /**
+   * The `Varies by state` pill, and null for a Task that does not. It is a
+   * string rather than a flag because it names the Practice's state when the
+   * Practice told the Tailoring Wizard one — a warning becomes a pointer.
+   * That is the whole of what a stored state buys inside the app, and it is
+   * not the beginning of per-state content.
+   */
+  stateNote: string | null;
   /**
    * The target date as a physician reads it, and null when there is none —
    * or when the Task is set aside, which dims to its title alone. A date on
@@ -236,7 +243,10 @@ export function journeyMap(
       snippet: setAside(task) ? null : bodyAsPlainText(task.body),
       status: task.status,
       retired: isRetired(task),
-      variesByState: task.kind === "global" && task.stateSpecific,
+      stateNote:
+        task.kind === "global" && task.stateSpecific
+          ? stateNoteFor(practice.state)
+          : null,
       targetDate:
         setAside(task) ? null : asWording(task.targetDate),
       open: task.ref === view.taskRef,
@@ -653,4 +663,9 @@ function readDependencies(
       otherPhaseName:
         row.phaseName === phaseInViewName ? null : row.phaseName,
     }));
+}
+
+/** `Varies by state`, pointed at a state when the Practice named one. */
+function stateNoteFor(state: string | null): string {
+  return state ? `Varies by state — check ${state}'s rules` : "Varies by state";
 }

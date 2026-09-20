@@ -269,6 +269,30 @@ export const continueAttempt = sqliteTable(
 );
 
 /**
+ * The fifty states and DC, which is the whole of what the Tailoring Wizard's
+ * state question accepts.
+ *
+ * A closed list rather than a free-text box, and spelled out in full rather
+ * than as two-letter codes, because this is the one part of the Practice
+ * Profile with a reader: `Varies by state — check Ohio's rules` is a sentence
+ * a physician reads, and `OH`, `Ohio` and `ohio` in one column would make it
+ * three sentences.
+ */
+export const PRACTICE_STATES = [
+  "Alabama", "Alaska", "Arizona", "Arkansas", "California", "Colorado",
+  "Connecticut", "Delaware", "District of Columbia", "Florida", "Georgia",
+  "Hawaii", "Idaho", "Illinois", "Indiana", "Iowa", "Kansas", "Kentucky",
+  "Louisiana", "Maine", "Maryland", "Massachusetts", "Michigan", "Minnesota",
+  "Mississippi", "Missouri", "Montana", "Nebraska", "Nevada", "New Hampshire",
+  "New Jersey", "New Mexico", "New York", "North Carolina", "North Dakota",
+  "Ohio", "Oklahoma", "Oregon", "Pennsylvania", "Rhode Island",
+  "South Carolina", "South Dakota", "Tennessee", "Texas", "Utah", "Vermont",
+  "Virginia", "Washington", "West Virginia", "Wisconsin", "Wyoming",
+] as const;
+
+export type PracticeState = (typeof PRACTICE_STATES)[number];
+
+/**
  * A Practice: one clinic and its shared task list, and the unit of tenancy.
  *
  * It has no name when it is created, because registration asks for nothing but
@@ -279,6 +303,36 @@ export const practice = sqliteTable("practice", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   /** Null until the Owner names it. Never shown as a blank line. */
   name: text("name"),
+
+  /**
+   * The Practice Profile: what the Practice told the Tailoring Wizard.
+   *
+   * Kept after the Wizard has set its Statuses, for wording and for
+   * segmenting email — never re-applied to Tasks published later (ADR-0002).
+   * Null on all three means the question was never answered, either because
+   * the Wizard was skipped or because the physician left one blank, and that
+   * is not a broken Practice: the Wizard is optional the whole way down.
+   *
+   * `state` is the only one with a live reader — it turns the journey map's
+   * quiet `Varies by state` pill into a pointer at a particular state's
+   * rules. The two booleans are stored and nothing displays them.
+   */
+  state: text("state", { enum: PRACTICE_STATES }),
+  /** False means mobile or house-call: the eight fixed-office Tasks do not apply. */
+  fixedLocation: integer("fixed_location", { mode: "boolean" }),
+  /** False means no hire inside six months: the six employment Tasks do not apply. */
+  expectsEmployees: integer("expects_employees", { mode: "boolean" }),
+  /**
+   * When the Tailoring Wizard stopped being owed — set by Continue and by
+   * Skip alike, because a skip is an answer and closing the tab is not.
+   *
+   * On the Practice and never on the User (ADR-0002): with no provenance
+   * there is no undo, so a Member accepting an Invite in month three must
+   * never be handed a screen that can mass-set Not Applicable across the
+   * Owner's work.
+   */
+  tailoringSettledAt: integer("tailoring_settled_at", { mode: "timestamp" }),
+
   createdAt: integer("created_at", { mode: "timestamp" })
     .notNull()
     .default(sql`(unixepoch())`),
@@ -325,6 +379,8 @@ export const TASK_STATUSES = [
 ] as const;
 
 export type TaskStatus = (typeof TASK_STATUSES)[number];
+
+
 
 /**
  * A Custom Task: a Task a Practice created for itself.

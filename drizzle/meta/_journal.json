@@ -43,6 +43,13 @@
       "when": 1789863739886,
       "tag": "0005_notes_on_custom_tasks",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1789869644768,
+      "tag": "0006_tailoring_wizard",
+      "breakpoints": true
     }
   ]
 }

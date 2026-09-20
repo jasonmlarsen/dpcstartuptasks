@@ -154,13 +154,19 @@ function absorbSetCookies(response: Response, cookies: Map<string, string>) {
  * every Task, and every test of the list would then be testing a Practice
  * that no registration ever produced. The first call for an address registers
  * it; every call after that just signs it back in.
+ *
+ * The Tailoring Wizard stands between a new Owner and the list, so this
+ * presses its Skip by default — through the real form, not by writing the
+ * flag — which leaves the Practice with all 98 Tasks not started, exactly as
+ * every test of the list assumes. A test of the Wizard itself passes
+ * `tailoring: "owed"` and meets the screen where a physician meets it.
  */
 export async function signInAs(
   app: TestApp,
   email: string,
-  options: { emailConsent?: boolean } = {},
+  options: { emailConsent?: boolean; tailoring?: "skip" | "owed" } = {},
 ): Promise<Response> {
-  const { emailConsent = true } = options;
+  const { emailConsent = true, tailoring = "skip" } = options;
 
   const body = new URLSearchParams({ email });
   // An unticked checkbox is absent from the submission, which is how a
@@ -178,9 +184,24 @@ export async function signInAs(
   if (!link) throw new Error(`No Sign-in Link was mailed to ${email}`);
   const token = new URL(link).searchParams.get("token") ?? "";
 
-  return app.fetch("/continue", {
+  const signedIn = await app.fetch("/continue", {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({ token }),
+  });
+
+  // A no-op for anyone the Wizard is not owed to — a Member, or an Owner who
+  // has already answered — because its action redirects to the list untouched.
+  if (tailoring === "skip") await skipTailoringWizard(app);
+
+  return signedIn;
+}
+
+/** Press Skip on the Tailoring Wizard, as a physician does. */
+export async function skipTailoringWizard(app: TestApp): Promise<Response> {
+  return app.fetch("/welcome", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({ intent: "skip" }),
   });
 }

@@ -55,6 +55,11 @@ ordering; Notes; Newly Added; Retire's split behaviour; Draft invisibility; the
 Tailoring Wizard; Leaving and the Grace Period; every admin screen; and Support
 View end to end.
 
+`signInAs` presses the **Tailoring Wizard's Skip** on the way through, so a
+test of the list opens on a Practice with all 98 Tasks not started. It goes
+through the real form rather than writing the flag, and a test of the Wizard
+itself passes `tailoring: "owed"` to stop where a physician stops.
+
 ADR-0004's two mandatory tests live here: *request → email → verify → session*
 reads the Sign-in Link out of the fake sender and posts it, and the revocation
 test removes a Member and asserts their next request is unauthenticated.

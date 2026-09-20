@@ -2,7 +2,7 @@ import { sql } from "drizzle-orm";
 import { describe, expect, it, onTestFinished } from "vitest";
 
 import { session, user, verification } from "~/database/schema";
-import { createTestApp, type TestApp } from "./harness";
+import { createTestApp, skipTailoringWizard, type TestApp } from "./harness";
 
 /**
  * Seam 1, on the only door into the product.
@@ -78,6 +78,10 @@ describe("signing in with a Sign-in Link", () => {
     const continued = await pressContinue(app, tokenFrom(link));
     expect(continued.status).toBe(302);
     expect(continued.headers.get("Location")).toBe("/tasks");
+
+    // The Tailoring Wizard now stands between a new Owner and the list, and
+    // pressing its Skip is the only thing this test wants from it.
+    await skipTailoringWizard(app);
 
     // The session is real, and the proof is the list opening: the journey map
     // is behind the door, and a visitor without a session is sent back out.
