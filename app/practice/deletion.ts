@@ -14,10 +14,10 @@ import type { CurrentPractice } from "./practice";
  * every session of every person in it is ended, and **nothing is
  * destroyed**. That last part is the whole design. The confirmation the
  * Owner read says the practice is permanently deleted after thirty days,
- * and that sentence is only true because a Purge (#42) is what does the
- * deleting — telling someone their data is gone while holding it for a
- * month is the one false promise available here, so the app holds the data
- * and says the number.
+ * and that sentence is only true because the Purge is what does the deleting
+ * (`app/admin/purge.ts`) — telling someone their data is gone while holding
+ * it for a month is the one false promise available here, so the app holds
+ * the data and says the number.
  *
  * Restoring inside the window is the operator clearing the column by hand,
  * documented in the restore runbook. That is a named v1 gap rather than an
@@ -32,6 +32,16 @@ import type { CurrentPractice } from "./practice";
  * the number the Purge counts to are the same number, and it lives here.
  */
 export const GRACE_PERIOD_DAYS = 30;
+
+/**
+ * A day, in milliseconds.
+ *
+ * Here beside the number it multiplies, because two files count the same
+ * thirty days from opposite ends — the Practices page says when a Purge falls
+ * due, and the Purge says which Practices are past it — and a private copy in
+ * each is two places to edit the day this stops being naive arithmetic.
+ */
+export const DAY_IN_MILLISECONDS = 24 * 60 * 60 * 1000;
 
 export type DeletionOutcome =
   | "deleted"

@@ -149,7 +149,8 @@ export async function stopSupportView(
  * has to be written at the moment it happens, because a deleted session row
  * afterwards is indistinguishable from any other deleted session row.
  *
- * The Purge will call this with `purged` when it lands (#42).
+ * The Purge calls it with `purged` for the same reason, at the other end of
+ * the Grace Period (`app/admin/purge.ts`).
  */
 export function endSupportViewsFor(
   writer: AppWriter,
@@ -163,6 +164,35 @@ export function endSupportViewsFor(
     .where(
       and(
         eq(impersonationLog.targetUserId, targetUserId),
+        isNull(impersonationLog.endedAt),
+      ),
+    )
+    .run();
+}
+
+/**
+ * Close every open Support View *into a Practice*, naming what ended it.
+ *
+ * The Purge's own version of the function above, and the difference is the
+ * column it matches on. A view aims at the Owner, so closing by User closes
+ * the same row in every case the product can produce — but the Purge is the
+ * one caller whose subject is the Practice rather than a person, and whose
+ * own failure mode can leave a Practice standing with no Memberships to
+ * enumerate. Matching `practice_id` is what the ticket asks for in the words
+ * it asks for it: *any in-flight Support View on that Practice*.
+ */
+export function endSupportViewsForPractice(
+  writer: AppWriter,
+  practiceId: number,
+  reason: SupportViewEndReason,
+  now: Date = new Date(),
+): void {
+  writer
+    .update(impersonationLog)
+    .set({ endedAt: now, endedReason: reason })
+    .where(
+      and(
+        eq(impersonationLog.practiceId, practiceId),
         isNull(impersonationLog.endedAt),
       ),
     )

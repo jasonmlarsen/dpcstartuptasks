@@ -29,6 +29,17 @@ export interface TestApp {
   fetch(input: string | URL | Request, init?: RequestInit): Promise<Response>;
   /** The same database the routes just used, seeded, for asserting on rows. */
   database: AppDatabase;
+  /**
+   * The very services the routes were handed, for the worker seam.
+   *
+   * `drainQueue` and the digest take a database and one client, but the Purge
+   * deletes Users, and deleting a User goes through the auth module (ADR-0004)
+   * — so it takes the whole bundle. This is that bundle and not a copy of it:
+   * a second `AppServices` over the same file would build a second Better Auth
+   * behind the worker's back, and *the sessions the requests above created*
+   * would stop being the sessions under test.
+   */
+  services: AppServices;
   emailSender: FakeEmailSender;
   kitClient: FakeKitClient;
   /** Cookies the app has set so far, for asserting a session was established. */
@@ -88,6 +99,7 @@ export function createTestApp(): TestApp {
   return {
     fetch,
     database,
+    services,
     emailSender,
     kitClient,
     cookies,

@@ -3,7 +3,7 @@ import type { SQLiteColumn } from "drizzle-orm/sqlite-core";
 
 import type { AppDatabase } from "~/database/database";
 import { membership, practice, type PracticeState } from "~/database/schema";
-import { GRACE_PERIOD_DAYS } from "~/practice/deletion";
+import { DAY_IN_MILLISECONDS, GRACE_PERIOD_DAYS } from "~/practice/deletion";
 
 /**
  * Every Practice, as the one page the Admin checks.
@@ -57,8 +57,6 @@ export interface PracticesDashboard {
   active: PracticeOnTheDashboard[];
   deletedInGrace: PracticeOnTheDashboard[];
 }
-
-const DAY_IN_MILLISECONDS = 24 * 60 * 60 * 1000;
 
 export function practicesDashboard(database: AppDatabase): PracticesDashboard {
   return {

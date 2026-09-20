@@ -783,8 +783,6 @@ export const feedbackDigest = sqliteTable("feedback_digest", {
  * Better Auth cannot tell them apart afterwards — a deleted session row is a
  * deleted session row — so the reason is written at the moment it happens,
  * and each one maps to exactly one sentence the Admin reads on the way out.
- * `purged` has no writer yet: the Purge is #42, and the value is here so that
- * the column it will write into already exists and already means something.
  */
 export const SUPPORT_VIEW_END_REASONS = [
   /** The Admin pressed Stop. The one exit that says nothing afterwards. */

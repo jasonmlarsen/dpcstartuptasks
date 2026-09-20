@@ -262,10 +262,10 @@ function people(count: number): string {
 /**
  * When the Grace Period runs out, and whether it already has.
  *
- * Purge is #42 and does not exist yet, so a Practice deleted forty days ago
- * is still sitting in this list. The honest thing is to say so: a section
- * headed *Deleted — in the grace period* would be wrong about exactly the
- * row the Admin most needs to see.
+ * A Practice deleted forty days ago should not be in this list at all, but
+ * it is here if the Purge has not run since its day 30. The honest thing is
+ * to say so: a section headed *Deleted — in the grace period* would be wrong
+ * about exactly the row the Admin most needs to see.
  */
 function purgeSentence(purgeDueOn: Date, now: number): string {
   return purgeDueOn.getTime() <= now

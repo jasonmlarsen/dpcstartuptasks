@@ -116,7 +116,17 @@ the fake implements, so no seam can see them — and they are the guard, not a
 detail. It is a pure function taking a string, asks the product to do nothing,
 and is not a seam.
 
-*The day-30 Purge is a later ticket. Build it to this shape.*
+`purgeDeletedPractices(services, now)` in `app/admin/purge.ts` is the third,
+and the one that departs from the shape: it takes the whole `AppServices`
+rather than a database and one client, because deleting a User goes through
+the auth module (ADR-0004) and the auth module takes the bundle. `test/purge.test.ts`
+arranges the Practice it destroys entirely through seam 1 — the Note, the
+Custom Task, the Invite and both Feedback are put there through the real
+screens — and then winds `deleted_at` back and asks the worker what day it
+is, because the two edges the ticket rests on are a day apart and no test can
+wait thirty days for them. `app.services` on the harness is that bundle and
+not a copy: a second one over the same file would build a second Better Auth
+behind the worker's back.
 
 ## 4. The Seed Script seam — `seed(db, csvPath)`, with the CLI as a thin wrapper
 

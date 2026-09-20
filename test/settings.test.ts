@@ -28,8 +28,8 @@ import { createTestApp, signInAs, type TestApp } from "./harness";
  * so the tests that matter most are the ones asserting that **nothing was
  * destroyed** and that everyone in it is nonetheless locked out.
  *
- * Purge is a later ticket (#42) and nothing here asserts anything about day
- * 30 beyond the Practice still being unreachable on day 29.
+ * Nothing here asserts anything about day 30 beyond the Practice still being
+ * unreachable on day 29; the Purge itself is seam 3, in `test/purge.test.ts`.
  */
 
 const OWNER = "dr.reed@example.com";

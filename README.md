@@ -83,6 +83,28 @@ long the oldest has been there, and how many were suppressed or dead-lettered.
 Suppressed is not a failure — it is a Cancelled address, and Cancelled is a
 hard wall the app never writes through.
 
+## The Purge
+
+Deleting a Practice sets `deleted_at` and destroys nothing. Thirty days later
+the Purge destroys all of it — the Practice, its Task Entries, its Custom
+Tasks, its Memberships, its outstanding Invites, its Feedback and every User
+who was in it, the Owner included (ADR-0007).
+
+```sh
+npm run purge                                      # daily, on a schedule
+npm run purge -- --database /data/launch-tasks.sqlite
+```
+
+Run from a checkout against the volume's file, like the drain above. **A
+Purge that never runs is a promise not kept**: the confirmation the Owner read
+says their practice is permanently deleted after thirty days, and this command
+is the only thing that makes that sentence true. Being late is harmless and
+being early is not — nothing is purged before day 30 — so a missed day costs
+nothing but a day.
+
+Restoring inside the window is the operator clearing `deleted_at` by hand
+(`docs/runbooks/restore.md`). Past day 30 there is nothing left to restore.
+
 ## Seeding the Task Library
 
 ```sh

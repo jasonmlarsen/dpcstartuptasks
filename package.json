@@ -16,7 +16,8 @@
     "db:migrate": "drizzle-kit migrate",
     "db:seed": "tsx scripts/seed.ts",
     "kit:drain": "tsx scripts/drain-kit-queue.ts",
-    "kit:provision": "tsx scripts/provision-kit-field.ts"
+    "kit:provision": "tsx scripts/provision-kit-field.ts",
+    "purge": "tsx scripts/purge.ts"
   },
   "dependencies": {
     "@react-router/node": "^8.4.0",

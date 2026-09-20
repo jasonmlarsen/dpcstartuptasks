@@ -181,7 +181,7 @@ The thirty days between an Owner deleting their Practice and the Purge. The Prac
 _Avoid_: Trash, soft delete (the mechanism, not the period), cooling-off, retention window
 
 **Purge**:
-The irreversible end of the Grace Period: the Practice, its Task Entries, its Custom Tasks, its Memberships, its outstanding Invites, and the Users of everyone who was in it — the Owner included — all deleted. Nothing is purged before it, and there is no partial Purge. It deliberately does not reach Kit: a Kit subscriber consented to a separate relationship and leaves it through the unsubscribe link in the email, never through deleting a Practice.
+The irreversible end of the Grace Period: the Practice, its Task Entries, its Custom Tasks, its Memberships, its outstanding Invites, its Feedback (ADR-0007), and the Users of everyone who was in it — the Owner included — all deleted. Nothing is purged before it, and there is no partial Purge. It deliberately does not reach Kit: a Kit subscriber consented to a separate relationship and leaves it through the unsubscribe link in the email, never through deleting a Practice.
 _Avoid_: Hard delete (accurate but says nothing about when), wipe, scrub (that word is taken, below)
 
 **Scrub**:
