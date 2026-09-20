@@ -4,6 +4,7 @@ import { createDatabase, type AppDatabase } from "~/database/database";
 import { databasePath } from "~/database/database-path";
 import type { EmailSender } from "./email-sender";
 import type { KitClient } from "./kit-client";
+import { createKitClient } from "./kit-http-client";
 
 /**
  * Everything a route is allowed to reach the outside world through.
@@ -43,6 +44,7 @@ export function getServices(
 }
 
 let productionServices: AppServices | undefined;
+let kitClient: KitClient | undefined;
 
 /**
  * The real services, built once per process from the environment.
@@ -63,15 +65,21 @@ function getProductionServices(): AppServices {
   productionServices ??= {
     database: createDatabase(databasePath()),
 
-    // Resend and Kit are later tickets. This one owes them the interfaces, not
-    // the implementations, and a route that reaches for one before it exists
-    // should say so here rather than fail somewhere downstream. Getters, so
-    // that a route needing only the database still gets it.
+    // Resend is a later ticket. This one owes it the interface, not the
+    // implementation, and a route that reaches for it before it exists should
+    // say so here rather than fail somewhere downstream. Getters, so that a
+    // route needing only the database still gets it.
     get emailSender(): EmailSender {
       throw new Error("EmailSender has no production implementation yet.");
     },
+
+    // Built on first use rather than at boot, and that is the shape rather
+    // than an optimisation: a missing `KIT_API_KEY` throws here, in the
+    // worker's face, and never in a physician's — no loader and no action
+    // ever asks for this, so nothing behind the door can be taken down by a
+    // Kit misconfiguration.
     get kitClient(): KitClient {
-      throw new Error("KitClient has no production implementation yet.");
+      return (kitClient ??= createKitClient());
     },
   };
   return productionServices;

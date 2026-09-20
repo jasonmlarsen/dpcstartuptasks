@@ -14,7 +14,9 @@
     "test:watch": "vitest",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
-    "db:seed": "tsx scripts/seed.ts"
+    "db:seed": "tsx scripts/seed.ts",
+    "kit:drain": "tsx scripts/drain-kit-queue.ts",
+    "kit:provision": "tsx scripts/provision-kit-field.ts"
   },
   "dependencies": {
     "@react-router/node": "^8.4.0",

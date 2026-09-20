@@ -66,3 +66,43 @@ export interface KitSubscriberInput {
 export type KitResult<T> =
   | { ok: true; status: number; data: T; warnings: string[] }
   | { ok: false; status: number; warnings: string[] };
+
+/**
+ * The one tag every consenting address is put on: `launch-tasks-signup`.
+ *
+ * An id rather than a name, because Kit's tag endpoints take ids and a name
+ * lookup would be a second call that can fail on its own. Registration is
+ * never routed through a Kit form — a form would mean a second consent
+ * screen, in somebody else's product, between a physician and their list.
+ */
+export const KIT_SIGNUP_TAG_ID = 23720088;
+
+/**
+ * The custom field the Practice State is written to.
+ *
+ * **Keyed `practice_state`, never `state`.** Kit derives a field's key from
+ * its label, so renaming the label renames the key and every write after that
+ * silently becomes a warning instead of a value — which is why the label is
+ * never renamed and why provisioning is a scripted, idempotent act
+ * (`scripts/provision-kit-field.ts`) rather than something the worker does
+ * on the fly. The field must pre-exist; a job that writes to a missing key
+ * gets a `201` and a warning, and that is a permanent failure.
+ *
+ * Kit's own id for it is `1369854`. Nothing here sends it — every write
+ * addresses the field by key, which is the name Kit resolves — so it is
+ * recorded in this sentence rather than as a constant nobody reads.
+ */
+export const KIT_PRACTICE_STATE_FIELD_KEY = "practice_state";
+export const KIT_PRACTICE_STATE_FIELD_LABEL = "Practice State";
+
+/**
+ * The Kit-hosted Resubscribe Form: the only way a Cancelled subscriber
+ * becomes active again, and the only part of the consent flow Launch Tasks
+ * does not own.
+ *
+ * `state` is create-only on Kit's API, so there is no write that resurrects
+ * anyone — the app links to this and never operates it. Its double opt-in
+ * stays on deliberately: the confirmation email *is* the explicit permission
+ * Kit requires.
+ */
+export const KIT_RESUBSCRIBE_FORM_URL = "https://directcaretools.kit.com/resubscribe";

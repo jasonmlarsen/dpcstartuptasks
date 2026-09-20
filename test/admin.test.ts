@@ -238,14 +238,19 @@ describe("the four sections", () => {
     expect(page).toContain('href="/admin/feedback"');
   });
 
-  it("are flat, and the one that is not built says so", async () => {
+  it("are flat, and System reports the Kit queue", async () => {
     const app = newApp();
     await signInAsAdmin(app);
 
     const response = await app.fetch("/admin/system");
 
     expect(response.status).toBe(200);
-    expect(await readable(response)).toContain("Not built yet.");
+    // The Admin signed in like anybody else, so there is one signup job
+    // waiting — and the page's job is to say how long the oldest one has
+    // been there, which is the number that means *stuck*.
+    const page = await readable(response);
+    expect(page).toContain("Kit sync jobs");
+    expect(page).toContain("The oldest job has been waiting");
   });
 
   it("does not offer the Admin the physician's Send feedback item", async () => {

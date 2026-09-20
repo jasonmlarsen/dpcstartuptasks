@@ -1,6 +1,12 @@
-import { Form, redirect } from "react-router";
+import { Form, Link, redirect } from "react-router";
 
 import { AppBar } from "~/components/app-bar";
+import {
+  emailConsentGrantedAt,
+  EMAIL_CONSENT_WORDING,
+  kitSuppressedAt,
+  subscribeByHand,
+} from "~/consent/email-consent";
 import { PRACTICE_STATES } from "~/database/schema";
 import {
   answerTailoring,
@@ -9,7 +15,7 @@ import {
   skipTailoring,
   tailoringOwed,
 } from "~/practice/tailoring";
-import { requireCurrentPractice } from "~/practice/signed-in-practice";
+import { requireCurrentPerson } from "~/practice/signed-in-practice";
 import { getServices } from "~/services/services";
 import type { Route } from "./+types/welcome";
 
@@ -33,21 +39,34 @@ export function meta(_: Route.MetaArgs) {
  */
 export async function loader({ context, request }: Route.LoaderArgs) {
   const services = getServices(context);
-  const practice = await requireCurrentPractice(services, request);
+  const { user, practice } = await requireCurrentPerson(services, request);
 
   // Answered, skipped, in flight, or read by a Member: all four are the same
   // answer, which is that this screen is not owed and the list is.
   if (!tailoringOwed(services.database, practice)) throw redirect("/tasks");
 
-  // Only for the appbar, which is on this screen for the same reason it is
-  // on every other one: the physician who spots a wrong question here is
-  // the physician who should be able to say so here.
-  return { practiceName: practice.name };
+  const asked = new URL(request.url).searchParams.get("email");
+
+  return {
+    // Only for the appbar, which is on this screen for the same reason it is
+    // on every other one: the physician who spots a wrong question here is
+    // the physician who should be able to say so here.
+    practiceName: practice.name,
+    // The second ask, and the last one: offered only to somebody who
+    // declined at registration, never to a Suppressed address — Kit has
+    // told us that person unsubscribed, and asking them again here would be
+    // the product arguing with them.
+    offerEmail:
+      asked === null &&
+      emailConsentGrantedAt(services.database, user.id) === null &&
+      kitSuppressedAt(services.database, user.id) === null,
+    thanked: asked === "thanks",
+  };
 }
 
 export async function action({ context, request }: Route.ActionArgs) {
   const services = getServices(context);
-  const practice = await requireCurrentPractice(services, request);
+  const { user, practice } = await requireCurrentPerson(services, request);
 
   // Checked again on the way in, so a second post of this form — a reload, a
   // back button, a Member with the URL — cannot run a bulk Not Applicable
@@ -55,6 +74,18 @@ export async function action({ context, request }: Route.ActionArgs) {
   if (!tailoringOwed(services.database, practice)) throw redirect("/tasks");
 
   const formData = await request.formData();
+
+  // The card at the end of the screen, which is a form of its own and not a
+  // field on the Wizard's: answering the three questions and saying yes to
+  // email are two separate acts, and posting them together would make one
+  // Continue press mean both.
+  if (formData.get("intent") === "subscribe") {
+    subscribeByHand(services.database, user.id);
+
+    // Back to the same screen, still owed, with the card replaced by a line
+    // of thanks. Their three questions are still in front of them.
+    throw redirect("/welcome?email=thanks");
+  }
 
   if (formData.get("intent") === "skip") {
     skipTailoring(services.database, practice);
@@ -73,6 +104,8 @@ export async function action({ context, request }: Route.ActionArgs) {
 }
 
 export default function Welcome({ loaderData }: Route.ComponentProps) {
+  const { offerEmail, thanked } = loaderData;
+
   return (
     <>
       <AppBar
@@ -158,8 +191,63 @@ export default function Welcome({ loaderData }: Route.ComponentProps) {
             </button>
           </div>
         </Form>
+
+        {offerEmail && <EmailOffer />}
+        {thanked && (
+          <p className="mt-10 rounded-md bg-gray-100 p-6 text-gray-700">
+            Thank you — you are on the list. Now, those three questions.
+          </p>
+        )}
       </main>
     </>
+  );
+}
+
+/**
+ * The one second ask: a card at the end of the Wizard, for the physician who
+ * left the box unticked at registration.
+ *
+ * Here and **nowhere else**. This screen is seen once per Practice and is
+ * gone, which is what makes a second ask fair — a card on the task list would
+ * be a thing a physician who already said no meets every morning, and that is
+ * not a card, it is a nag. Declining twice is declining, and the Subscribe
+ * button in settings is where a change of mind goes afterwards.
+ *
+ * Below the Wizard's own form rather than inside it: the answers and the
+ * consent are two acts, and one Continue press must never quietly mean both.
+ * Dismissing is a link and not a button for the same reason the delete
+ * confirmation is a URL — it survives a reload and costs no client JS, and
+ * this screen has no memory to write it into anyway.
+ */
+function EmailOffer() {
+  return (
+    <section className="mt-12 rounded-md border border-gray-300 p-6">
+      <h2 className="text-lg font-semibold text-gray-900">
+        One more thing — email from us
+      </h2>
+      {/* The Consent Wording itself, under the same version the registration
+          form stamps: a version has to name a sentence somebody read. */}
+      <p className="mt-2 text-gray-700">{EMAIL_CONSENT_WORDING}</p>
+
+      <div className="mt-4 flex flex-wrap items-center gap-4">
+        <Form method="post">
+          <input type="hidden" name="intent" value="subscribe" />
+          <button
+            type="submit"
+            className="rounded-md bg-primary px-4 py-3 text-base font-medium text-white"
+          >
+            Yes, email me
+          </button>
+        </Form>
+
+        <Link
+          to="/welcome?email=no"
+          className="rounded-md border border-gray-400 px-4 py-3 text-base font-medium text-gray-900"
+        >
+          No thanks
+        </Link>
+      </div>
+    </section>
   );
 }
 

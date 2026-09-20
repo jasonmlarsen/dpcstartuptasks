@@ -103,8 +103,20 @@ carries is sent through the real box — and acts by calling the function, which
 is the division to keep: **a worker test still asserts on what a physician
 put there**, not on rows it wrote itself.
 
-*`drainQueue` and the day-30 Purge are later tickets. Build them to this
-shape.*
+`drainQueue(database, kitClient, now)` in `app/consent/kit-sync-worker.ts` is
+the second, built to that shape: `test/kit-sync.test.ts` arranges every case
+through seam 1 — a physician registers, presses Subscribe, or saves a state —
+and acts by calling the worker, because there is no request to hang it on. It
+never writes a job row by hand: a queue full of rows no screen produced would
+pass while the screens meant to fill it did nothing.
+
+Its one departure is `subscriberSearchPath`, asserted directly. The
+percent-encoding and `status=all` live in the HTTP client, below the interface
+the fake implements, so no seam can see them — and they are the guard, not a
+detail. It is a pure function taking a string, asks the product to do nothing,
+and is not a seam.
+
+*The day-30 Purge is a later ticket. Build it to this shape.*
 
 ## 4. The Seed Script seam — `seed(db, csvPath)`, with the CLI as a thin wrapper
 

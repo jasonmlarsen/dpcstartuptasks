@@ -147,7 +147,7 @@ _Avoid_: Notification, alert, summary email
 ### Consent
 
 **Email Consent**:
-A User's permission to be sent occasional non-transactional email. Asked at registration as a checkbox ticked by default, and grantable later from settings by a User who declined — never a condition of using the product, since Launch Tasks is free and stays usable whether or not it is given. Consent is **append-only**: the app can record that it was given, never that it was withdrawn. It is therefore a record of an act, not a statement of current state — a User who consented and later used an email's unsubscribe link still has Email Consent recorded, and the app does not know.
+A User's permission to be sent occasional non-transactional email. Asked at registration as a checkbox ticked by default, offered once more on a dismissible card at the end of the Tailoring Wizard to a User who declined, and grantable later from settings by a User who still has not — never a condition of using the product, since Launch Tasks is free and stays usable whether or not it is given. Three asking points and no fourth: the card is on a screen seen once per Practice and gone, and there is nothing on the task list, because a card a physician who said no meets every morning is a nag rather than an offer. Consent is **append-only**: the app can record that it was given, never that it was withdrawn. It is therefore a record of an act, not a statement of current state — a User who consented and later used an email's unsubscribe link still has Email Consent recorded, and the app does not know.
 _Avoid_: Subscription (that is Kit's word for its own state), opt-in, marketing permission
 
 **Cancelled**:

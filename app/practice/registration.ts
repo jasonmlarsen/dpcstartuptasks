@@ -2,6 +2,7 @@ import { eq, isNotNull } from "drizzle-orm";
 
 import type { SignedInUser } from "~/auth/server";
 import { claimEmailConsent } from "~/consent/email-consent";
+import { enqueueKitSyncJob } from "~/consent/kit-sync-queue";
 import type { AppDatabase, AppWriter } from "~/database/database";
 import { globalTask, membership, practice, taskEntry } from "~/database/schema";
 import { acceptInviteOnSignIn } from "./invite";
@@ -60,7 +61,15 @@ export function registerPractice(
     // Claimed for a returning physician too. Consent is append-only, so this
     // can only ever add one that was never given — it cannot rewrite or clear
     // an act already recorded.
-    claimEmailConsent(tx, signedInUser.id, signedInUser.email);
+    const consented = claimEmailConsent(tx, signedInUser.id, signedInUser.email);
+
+    // A row in a table, and never a call to Kit. This is the single most
+    // load-bearing thing about the whole Kit integration: registration is the
+    // one moment a physician is waiting, and a Kit outage may not delay it,
+    // fail it, or show them anything at all. Enqueued inside the same
+    // transaction as the consent it follows from, so there is no world in
+    // which one exists without the other.
+    if (consented) enqueueKitSyncJob(tx, signedInUser.id, "signup");
 
     return { displayName: invited.joined ? invited.displayName : null };
   });

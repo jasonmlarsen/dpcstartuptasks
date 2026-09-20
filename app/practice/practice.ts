@@ -1,5 +1,6 @@
 import { and, eq, isNull } from "drizzle-orm";
 
+import { enqueueKitSyncForPractice } from "~/consent/kit-sync-queue";
 import type { AppDatabase } from "~/database/database";
 import { membership, practice, type PracticeState } from "~/database/schema";
 
@@ -65,11 +66,14 @@ export function practiceFor(
  * them, so an editor for them would promise a re-tailoring that does not
  * exist (ADR-0002).
  *
- * State has a second reader that is not built yet: Kit's `practice_state`
- * custom field. Changing it here will have to enqueue a Kit Sync Job when
- * #41 lands — until then this write is the whole of it, and the `Varies by
- * state` pointer on the list is its only consumer. Changing it never
- * re-runs the Tailoring Wizard, which is once per Practice and gone.
+ * State has a second reader: Kit's `practice_state` custom field. A change
+ * to it enqueues a Kit Sync Job for everyone in the Practice who has Email
+ * Consent — a row in a table, never a call to Kit, so saving this form is as
+ * fast during a Kit outage as it is at any other time. Nothing is enqueued
+ * when the state did not move: the field would be written to the value it
+ * already holds, which is a Kit call bought with a typo in the clinic's name.
+ * Changing it never re-runs the Tailoring Wizard, which is once per Practice
+ * and gone.
  */
 export function describePractice(
   database: AppDatabase,
@@ -85,6 +89,10 @@ export function describePractice(
     .set({ name: named === "" ? null : named, state: details.state })
     .where(eq(practice.id, current.id))
     .run();
+
+  if (details.state !== current.state) {
+    enqueueKitSyncForPractice(database, current.id, "practice_state");
+  }
 }
 
 /**

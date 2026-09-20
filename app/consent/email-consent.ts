@@ -3,6 +3,7 @@ import { and, desc, eq, gt, isNull, lt } from "drizzle-orm";
 import type { AppWriter } from "~/database/database";
 import { pendingEmailConsent, user } from "~/database/schema";
 import { emailDigest } from "~/lib/email-digest";
+import { enqueueKitSyncJob } from "./kit-sync-queue";
 
 /**
  * Email Consent: a physician's permission to be sent occasional
@@ -113,7 +114,7 @@ export function claimEmailConsent(
   userId: string,
   email: string,
   now: Date = new Date(),
-): void {
+): boolean {
   const digest = emailDigest(email);
 
   const waiting = database
@@ -136,9 +137,9 @@ export function claimEmailConsent(
     .where(eq(pendingEmailConsent.emailDigest, digest))
     .run();
 
-  if (!waiting) return;
+  if (!waiting) return false;
 
-  recordConsent(database, userId, waiting.grantedAt, waiting.version);
+  return recordConsent(database, userId, waiting.grantedAt, waiting.version);
 }
 
 /**
@@ -164,6 +165,31 @@ export function emailConsentGrantedAt(
 }
 
 /**
+ * When a Kit Sync Job last found this address Cancelled, or null.
+ *
+ * Suppressed, read from the local column and never from Kit — settings has to
+ * be able to explain the refusal on a page load, and a page load may not call
+ * Kit. It is a cached observation: the physician may have been through the
+ * Resubscribe Form since, and the next job to read them clears it.
+ *
+ * A Kit fact rather than a consent fact, and it lives here because the part of
+ * settings that reads it is the part that reads the act of consent — the two
+ * together are the whole of what that page may say about email.
+ */
+export function kitSuppressedAt(
+  database: AppWriter,
+  userId: string,
+): Date | null {
+  const row = database
+    .select({ suppressedAt: user.kitSuppressedAt })
+    .from(user)
+    .where(eq(user.id, userId))
+    .get();
+
+  return row?.suppressedAt ?? null;
+}
+
+/**
  * Settings' Subscribe button: a User who declined at registration changing
  * their mind.
  *
@@ -176,20 +202,25 @@ export function emailConsentGrantedAt(
  * the same sentence the registration form shows and the same version
  * recorded here — a version has to name a sentence somebody actually read.
  *
- * Enqueuing the Kit Sync Job that follows from this belongs to the Kit
- * ticket (#41), which is also where a Suppressed address stops being shown
- * a button at all.
+ * There are two buttons and one rule, so there is one function: settings'
+ * Subscribe and the card at the end of the Tailoring Wizard both come here,
+ * and both grant *and* enqueue. Enqueuing is not conditional on the grant
+ * being new — a press by somebody who consented a year ago is a second
+ * Subscribe press, and the point of one of those is a job that re-reads Kit
+ * and clears a stale `kit_suppressed_at`.
  */
-export function grantEmailConsent(
+export function subscribeByHand(
   database: AppWriter,
   userId: string,
   now: Date = new Date(),
 ): void {
   recordConsent(database, userId, now, EMAIL_CONSENT_VERSION);
+  enqueueKitSyncJob(database, userId, "signup", now);
 }
 
 /**
- * Write an act of consent onto a User, and never over one.
+ * Write an act of consent onto a User, and never over one. Answers whether
+ * this call was the one that wrote it.
  *
  * The `IS NULL` is the append-only rule spelled as a clause, and it is
  * spelled once: an act already recorded keeps its timestamp and its
@@ -203,10 +234,15 @@ function recordConsent(
   userId: string,
   grantedAt: Date,
   version: string,
-): void {
-  database
+): boolean {
+  const written = database
     .update(user)
     .set({ emailConsentGrantedAt: grantedAt, emailConsentVersion: version })
     .where(and(eq(user.id, userId), isNull(user.emailConsentGrantedAt)))
     .run();
+
+  // No row changed means an act was already recorded, which the `IS NULL`
+  // above protects. The caller reads this to decide whether anything new
+  // happened, never to decide whether consent is in hand.
+  return written.changes > 0;
 }

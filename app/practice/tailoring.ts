@@ -1,5 +1,6 @@
 import { and, eq, inArray, ne } from "drizzle-orm";
 
+import { enqueueKitSyncForPractice } from "~/consent/kit-sync-queue";
 import type { AppDatabase } from "~/database/database";
 import {
   globalTask,
@@ -151,6 +152,14 @@ export function answerTailoring(
       })
       .where(eq(practice.id, current.id))
       .run();
+
+    // The Wizard is where most Practices first say which state they are in,
+    // and Kit holds that against a person as `practice_state`. A row in the
+    // queue, inside this transaction, and never a call: the screen between a
+    // physician and their list may not wait on a newsletter.
+    if (answers.state !== null) {
+      enqueueKitSyncForPractice(tx, current.id, "practice_state");
+    }
 
     const slugs = [
       ...(answers.fixedLocation === false ? FIXED_OFFICE_TASKS : []),

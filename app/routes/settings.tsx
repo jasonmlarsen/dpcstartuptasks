@@ -5,7 +5,8 @@ import { AppBar } from "~/components/app-bar";
 import {
   emailConsentGrantedAt,
   EMAIL_CONSENT_WORDING,
-  grantEmailConsent,
+  kitSuppressedAt,
+  subscribeByHand,
 } from "~/consent/email-consent";
 import { PRACTICE_PEOPLE_CAP, PRACTICE_STATES } from "~/database/schema";
 import { asPlainDate } from "~/lib/plain-date";
@@ -26,6 +27,7 @@ import {
 import { describePractice } from "~/practice/practice";
 import { requireCurrentPerson } from "~/practice/signed-in-practice";
 import { asPracticeState } from "~/practice/tailoring";
+import { KIT_RESUBSCRIBE_FORM_URL } from "~/services/kit-client";
 import { getServices } from "~/services/services";
 import type { Route } from "./+types/settings";
 
@@ -55,6 +57,7 @@ export async function loader({ context, request }: Route.LoaderArgs) {
   const { user, practice } = await requireCurrentPerson(services, request);
 
   const consentGrantedAt = emailConsentGrantedAt(services.database, user.id);
+  const suppressedAt = kitSuppressedAt(services.database, user.id);
 
   return {
     you: { userId: user.id, email: user.email, name: user.name },
@@ -74,6 +77,10 @@ export async function loader({ context, request }: Route.LoaderArgs) {
     // lands in is a statement about a day and the server is the only place
     // that renders it twice the same way.
     consentGrantedOn: consentGrantedAt ? asPlainDate(consentGrantedAt) : null,
+    // Suppressed: what Kit told a Sync Job about this address, which is the
+    // one thing on this page that is about Kit's state rather than about an
+    // act. It is read from a column, never from Kit.
+    suppressed: suppressedAt !== null,
     // The delete question is a URL, so it survives a reload and a back
     // button and costs no client JS — the same shape the drawer's Delete
     // this task uses.
@@ -108,7 +115,9 @@ export async function action({ context, request }: Route.ActionArgs) {
   }
 
   if (intent === "subscribe") {
-    grantEmailConsent(services.database, user.id);
+    // Grants and enqueues, and never calls Kit: this page cannot, and the
+    // job is what re-reads Kit on a physician's behalf.
+    subscribeByHand(services.database, user.id);
 
     throw redirect("/settings");
   }
@@ -204,6 +213,7 @@ export default function Settings({
     invites,
     placesLeft,
     consentGrantedOn,
+    suppressed,
     confirmingDelete,
   } = loaderData;
   const attempt = actionData?.attempt;
@@ -233,7 +243,10 @@ export default function Settings({
           attempt={attempt}
         />
 
-        <EmailSection consentGrantedOn={consentGrantedOn} />
+        <EmailSection
+          consentGrantedOn={consentGrantedOn}
+          suppressed={suppressed}
+        />
 
         <AccountSection email={you.email} />
 
@@ -433,21 +446,32 @@ function PeopleSection({
  * the footer of the email is where it happens and where it works, whatever
  * this page does.
  *
- * A Suppressed address — one Kit has told us is Cancelled — loses the
- * Subscribe button entirely and gets a paragraph and a link to the
- * Resubscribe Form instead. That arrives with the Kit ticket (#41), which
- * is what puts a `kit_suppressed_at` on the User in the first place.
+ * A Suppressed address — one a Kit Sync Job found Cancelled — **loses the
+ * Subscribe button entirely**. Not disabled, not shown with an error: a
+ * button that cannot work is a promise the app cannot keep, because `state`
+ * is create-only on Kit's API and there is no write that resurrects anyone.
+ * What replaces it is the plain truth and the one link that does work.
  */
-function EmailSection({ consentGrantedOn }: { consentGrantedOn: string | null }) {
+function EmailSection({
+  consentGrantedOn,
+  suppressed,
+}: {
+  consentGrantedOn: string | null;
+  suppressed: boolean;
+}) {
   return (
     <section>
       <SectionHeading>Email from us</SectionHeading>
 
-      {consentGrantedOn ? (
+      {consentGrantedOn && (
         <p className="mt-2 text-gray-700">
           You said yes to our email on {consentGrantedOn}.
         </p>
-      ) : (
+      )}
+
+      {suppressed ? (
+        <Suppressed />
+      ) : consentGrantedOn ? null : (
         <>
           <p className="mt-2 text-gray-700">
             You have not said yes to email from us. Launch Tasks is free and
@@ -474,12 +498,55 @@ function EmailSection({ consentGrantedOn }: { consentGrantedOn: string | null })
         </>
       )}
 
-      <p className="mt-4 text-sm text-gray-600">
-        The unsubscribe link at the bottom of any email we send always works,
-        whatever this page says — leaving the email list has nothing to do
-        with leaving Launch Tasks.
-      </p>
+      {/* Pointless to somebody who has already used it, and the Suppressed
+          paragraph above says the same thing from the other end. */}
+      {!suppressed && (
+        <p className="mt-4 text-sm text-gray-600">
+          The unsubscribe link at the bottom of any email we send always works,
+          whatever this page says — leaving the email list has nothing to do
+          with leaving Launch Tasks.
+        </p>
+      )}
     </section>
+  );
+}
+
+/**
+ * What a Suppressed address is told: that they unsubscribed, that we cannot
+ * undo it, and where the form that can is.
+ *
+ * Every sentence here is the app declining to do something, and it says so
+ * plainly rather than apologising or hedging — nothing punitive happened and
+ * nothing is broken; the physician asked to be taken off a list and Kit
+ * honoured it. The link is the Resubscribe Form, which Launch Tasks links to
+ * and never operates: its double opt-in is the explicit permission Kit
+ * requires, and the confirmation email is where it is given.
+ *
+ * It does not say *press Subscribe again afterwards*, because there is no
+ * button here to press. The next Kit Sync Job this User's Practice produces
+ * reads Kit again, finds them active, and clears the suppression on its own.
+ */
+function Suppressed() {
+  return (
+    <>
+      <p className="mt-2 text-gray-700">
+        You unsubscribed from our email, so we have stopped sending it. We
+        cannot add you back ourselves — that has to come from you, which is
+        the rule that makes an unsubscribe worth anything.
+      </p>
+      <p className="mt-4 text-gray-700">
+        If you would like it again, sign up on{" "}
+        <a
+          href={KIT_RESUBSCRIBE_FORM_URL}
+          className="text-primary underline"
+          rel="noreferrer"
+        >
+          this form
+        </a>
+        . It sends a confirmation email, and the list starts again when you
+        click the link in it.
+      </p>
+    </>
   );
 }
 

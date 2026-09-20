@@ -92,6 +92,13 @@
       "when": 1789911802854,
       "tag": "0012_support_view",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "6",
+      "when": 1789919292534,
+      "tag": "0013_kit_sync_jobs",
+      "breakpoints": true
     }
   ]
 }

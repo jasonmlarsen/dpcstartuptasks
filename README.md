@@ -41,11 +41,47 @@ In development all three have defaults and nothing needs setting.
 | `APP_URL` | Where the app answers, and what a Sign-in Link is addressed to. |
 | `AUTH_SECRET` | What session cookies are signed with. Changing it signs everyone out. |
 | `TRUSTED_PROXIES` | The reverse proxies in front of the app, as IPs or CIDR ranges, comma-separated. Unset behind a proxy, no client IP can be derived at all and the per-IP limit on Continue has to refuse every press. Behind Coolify this is the Traefik container's address on the app's Docker network — find it with `docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' coolify-proxy`. Use the proxy's own address, not a broad private range that would also cover a client. |
+| `KIT_API_KEY` | The Kit v4 API key, sent as `X-Kit-Api-Key`. Read only by the sync worker and the provisioning script, never by the app. |
+
+`KIT_API_KEY` is the one credential that is **not** asserted at boot
+([ADR-0008](./docs/adr/0008-the-kit-api-key-is-an-environment-variable.md)).
+Kit is a newsletter and never the product, so a container without it starts and
+serves normally; what refuses is the drain below, and the queue holds until
+somebody sets it.
 
 `/health` is the uptime monitor's endpoint. It answers `LAUNCH_TASKS_OK` — the
 keyword UptimeRobot watches for — and it can only answer it by reading that
 string out of a real row in a real SQLite file. A database that cannot be
 opened, never migrated, or errors on read gets a `503` with no keyword in it.
+
+## Kit sync
+
+Consented addresses reach Kit through a queue drained by a worker, so a Kit
+outage never delays or fails a physician's registration. **No loader and no
+action calls Kit** — a request only ever writes a `kit_sync_job` row.
+
+```sh
+npm run kit:provision                              # once per Kit account
+npm run kit:drain                                  # the worker, on a schedule
+npm run kit:drain -- --database /data/launch-tasks.sqlite
+```
+
+`kit:provision` creates the `practice_state` custom field and is idempotent:
+it lists the account's fields first and writes nothing if ours is there. Run
+it **before the first drain**. Kit does not refuse a write to a field key it
+does not know — it answers `201`, drops the key, and puts a line in a
+`warnings` array, which the worker treats as a permanent failure.
+
+Both **run from a checkout against the volume's file**, not from inside the
+container — the production image carries neither `scripts/` nor `tsx`, and the
+drain is an operator act on a schedule (a cron entry on the VPS) in the same
+way seeding is an operator act by hand. A drain that never runs costs a
+newsletter sync and nothing a physician can see.
+
+The admin panel's System page reports the queue: how many are waiting, how
+long the oldest has been there, and how many were suppressed or dead-lettered.
+Suppressed is not a failure — it is a Cancelled address, and Cancelled is a
+hard wall the app never writes through.
 
 ## Seeding the Task Library
 

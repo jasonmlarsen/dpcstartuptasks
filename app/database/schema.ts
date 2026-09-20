@@ -163,6 +163,38 @@ export const user = sqliteTable("user", {
   emailConsentVersion: text("email_consent_version"),
 
   /**
+   * The `subscriber.id` Kit gave this address, or null because no Kit Sync Job
+   * has landed yet.
+   *
+   * Written by the worker and by nothing else — the app makes no Kit call from
+   * any loader — and it is the whole of what makes a second job cheap: with an
+   * id a job reads by id and writes with `PUT`, and without one it has to go
+   * looking by address. A job that needs an id and finds none is not an error
+   * and never creates a subscriber on a guess: the first sync has not landed,
+   * so the second defers and runs again later.
+   *
+   * Kept when a subscriber is Cancelled, because the Resubscribe Form returns
+   * a physician to `active` carrying the same id.
+   */
+  kitSubscriberId: integer("kit_subscriber_id"),
+
+  /**
+   * When a Kit Sync Job last found this address Cancelled in Kit.
+   *
+   * Suppressed: a cached observation, not a verdict. It exists so settings can
+   * explain the refusal without calling Kit, which it may never do. Only the
+   * physician can leave Cancelled, through the Resubscribe Form, and the next
+   * job that reads a non-cancelled subscriber clears this column — so a stale
+   * one costs an explanation and never a wrong write.
+   *
+   * This is not a revocation of Email Consent. Consent is append-only and
+   * stays exactly as it was recorded (`email_consent_granted_at` above);
+   * this column records what *Kit* said about the address, which is a
+   * different fact about a different system.
+   */
+  kitSuppressedAt: integer("kit_suppressed_at", { mode: "timestamp" }),
+
+  /**
    * The four columns Better Auth's `admin` plugin declares on this table.
    *
    * `role` is the whole of the admin panel's guard, and it is deliberately
@@ -818,5 +850,111 @@ export const impersonationLog = sqliteTable(
     // side asks *what was my last one* on the way back in.
     index("impersonation_log_target_idx").on(table.targetUserId, table.endedAt),
     index("impersonation_log_admin_idx").on(table.adminUserId, table.startedAt),
+  ],
+);
+
+/**
+ * What one Kit Sync Job writes.
+ *
+ * Two kinds and no third, because there are exactly two facts this product
+ * tells Kit about a person: *this address consented and belongs on the list*,
+ * and *this is the state they practise in*. A kind rather than a payload, so
+ * a queued row cannot carry a value that was true when it was written and is
+ * wrong by the time it is drained — the worker reads both facts live.
+ */
+export const KIT_SYNC_KINDS = [
+  /**
+   * The signup: the subscriber, the `launch-tasks-signup` tag, and the
+   * Practice State field in one job. Enqueued by registration and by the
+   * Subscribe button, and it is the only kind that may create a subscriber.
+   */
+  "signup",
+  /**
+   * The Practice State field alone, for a Practice that changed the state it
+   * practises in. Never creates anybody: with no `kit_subscriber_id` stored
+   * the first sync has not landed, and this job defers rather than racing it.
+   */
+  "practice_state",
+] as const;
+
+export type KitSyncKind = (typeof KIT_SYNC_KINDS)[number];
+
+/**
+ * How a Kit Sync Job ended. Null is *still queued*, which includes a job that
+ * has run, deferred, and is waiting to run again.
+ */
+export const KIT_SYNC_OUTCOMES = [
+  /** Kit took the write. The only outcome that changed anything over there. */
+  "synced",
+  /**
+   * Nothing was written, and that is a success. Either Kit says the address is
+   * Cancelled — a hard wall, never a failure and never retried — or the User
+   * has no Email Consent recorded at all. The two are the same rule seen from
+   * two sides: no consent in hand, no write.
+   */
+  "suppressed",
+  /**
+   * A permanent failure: a non-empty `warnings` array on a `2xx`, or a job
+   * that ran out of attempts. Dead-lettered rather than retried forever, and
+   * visible on the admin panel's System page.
+   */
+  "failed",
+] as const;
+
+export type KitSyncOutcome = (typeof KIT_SYNC_OUTCOMES)[number];
+
+/**
+ * A Kit Sync Job: one queued unit of work that writes one fact about one User
+ * to Kit.
+ *
+ * The queue is the whole of the Kit integration's shape. Registration must
+ * never wait on Kit and must never fail because of it — a physician signing up
+ * during a Kit outage gets their Practice, their list and their Sign-in Link
+ * at the usual speed, and the newsletter catches up later. So consent
+ * *enqueues*, and only the worker calls Kit.
+ *
+ * `run_after` is what makes a deferral cheap: a job with no `kit_subscriber_id`
+ * to write against, or one that met a `404` on its `PUT`, is not a dead letter
+ * — it is a job whose turn has not come, and it goes back in the queue with a
+ * later `run_after`. A dead letter here is only ever the two things that
+ * genuinely cannot succeed by being tried again.
+ */
+export const kitSyncJob = sqliteTable(
+  "kit_sync_job",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    /**
+     * Whose address this job is about. Cascades, because a purged User has no
+     * fact left to tell Kit — and Purge deliberately does not reach Kit
+     * itself: a subscriber consented to a separate relationship and leaves it
+     * through the unsubscribe link, never through a deleted Practice.
+     */
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    kind: text("kind", { enum: KIT_SYNC_KINDS }).notNull(),
+    /** Not before this moment. Written forward by every deferral. */
+    runAfter: integer("run_after", { mode: "timestamp" })
+      .notNull()
+      .default(sql`(unixepoch())`),
+    /** How many times the worker has picked this job up. */
+    attempts: integer("attempts").notNull().default(0),
+    /** Null while the job is queued. Set once, by whatever settled it. */
+    outcome: text("outcome", { enum: KIT_SYNC_OUTCOMES }),
+    /**
+     * One line for an operator: which wall the job met, or which warning Kit
+     * answered with. Never shown to a physician.
+     */
+    detail: text("detail"),
+    settledAt: integer("settled_at", { mode: "timestamp" }),
+    createdAt: integer("created_at", { mode: "timestamp" })
+      .notNull()
+      .default(sql`(unixepoch())`),
+  },
+  (table) => [
+    // The drain reads queued jobs whose turn has come, oldest first.
+    index("kit_sync_job_queue_idx").on(table.outcome, table.runAfter),
+    // Enqueuing asks whether this User already has one of this kind waiting.
+    index("kit_sync_job_user_idx").on(table.userId, table.kind, table.outcome),
   ],
 );
