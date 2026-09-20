@@ -17,6 +17,7 @@ import {
 } from "~/lib/markdown";
 import { slugify } from "~/lib/slug";
 import type { CurrentPractice } from "./practice";
+import { customRef } from "./task-ref";
 
 /**
  * The journey map: one Phase in view, and the Task the physician opened.
@@ -69,6 +70,13 @@ export interface JourneyCard {
    */
   retired: boolean;
   variesByState: boolean;
+  /**
+   * The target date as a physician reads it, and null when there is none —
+   * or when the Task is set aside, which dims to its title alone. A date on
+   * a card is the only place a deadline is visible without opening the
+   * drawer, which is the whole reason a date is worth setting.
+   */
+  targetDate: string | null;
   open: boolean;
   /** The card that just moved, which flashes where it landed for 900ms. */
   landed: boolean;
@@ -107,6 +115,17 @@ export interface OpenTaskView {
   status: TaskStatus;
   /** Retired, so the drawer reads `No longer required` and offers no control. */
   retired: boolean;
+  /** The Practice's own writing, exactly as it was typed, for the edit box. */
+  note: string;
+  /**
+   * The same Note rendered, and null when there is none. Sanitized HTML,
+   * from the parser that will not emit HTML — see `app/lib/markdown.ts`.
+   */
+  noteHtml: string | null;
+  /** The target date as `yyyy-mm-dd`, which is what the date field takes back. */
+  targetDateValue: string | null;
+  /** The same date as a physician reads it. */
+  targetDate: string | null;
   helpfulLinks: HelpfulLinkView[];
   dependencies: DependencyAdvice[];
 }
@@ -211,6 +230,8 @@ export function journeyMap(
       status: task.status,
       retired: isRetired(task),
       variesByState: task.kind === "global" && task.stateSpecific,
+      targetDate:
+        setAside(task) ? null : asWording(task.targetDate),
       open: task.ref === view.taskRef,
       landed: task.ref === view.movedRef,
     })),
@@ -240,6 +261,14 @@ interface MergedTaskShared {
   title: string;
   body: string;
   status: TaskStatus;
+  /**
+   * The Practice's own writing, and the day it is aiming at. Both kinds of
+   * Task carry them — a Global Task on its Task Entry, a Custom Task on
+   * itself — because a Note belongs to the Practice and a Practice does not
+   * think of its own Tasks as a different kind of thing.
+   */
+  note: string | null;
+  targetDate: Date | null;
 }
 
 interface MergedGlobalTask extends MergedTaskShared {
@@ -272,6 +301,8 @@ function readGlobalTasks(
       position: globalTask.position,
       retiredAt: globalTask.retiredAt,
       status: taskEntry.status,
+      note: taskEntry.note,
+      targetDate: taskEntry.targetDate,
     })
     .from(taskEntry)
     .innerJoin(globalTask, eq(taskEntry.globalTaskId, globalTask.id))
@@ -292,6 +323,8 @@ function readGlobalTasks(
       title: row.title,
       body: row.body,
       status: row.status,
+      note: row.note,
+      targetDate: row.targetDate,
       stateSpecific: row.stateSpecific,
       position: row.position,
       retiredAt: row.retiredAt,
@@ -309,6 +342,8 @@ function readCustomTasks(
       title: customTask.title,
       body: customTask.body,
       status: customTask.status,
+      note: customTask.note,
+      targetDate: customTask.targetDate,
       createdAt: customTask.createdAt,
     })
     .from(customTask)
@@ -325,19 +360,10 @@ function readCustomTasks(
       title: row.title,
       body: row.body,
       status: row.status,
+      note: row.note,
+      targetDate: row.targetDate,
       createdAt: row.createdAt,
     }));
-}
-
-/**
- * A Custom Task's `?task=` value.
- *
- * Prefixed rather than bare, and resolved after the Global slugs, so the two
- * kinds share one query parameter without a Custom Task ever being able to
- * shadow a Task in the Library.
- */
-function customRef(id: number): string {
-  return `custom-${id}`;
 }
 
 /**
@@ -481,6 +507,12 @@ function openTask(
         : renderPracticeBody(task.body),
     status: task.status,
     retired: isRetired(task),
+    note: task.note ?? "",
+    // A Note is a Practice's own writing, so it goes through the parser
+    // that will not emit HTML whatever it is handed — never the Admin's.
+    noteHtml: task.note ? renderPracticeBody(task.note) : null,
+    targetDateValue: task.targetDate ? asDayValue(task.targetDate) : null,
+    targetDate: asWording(task.targetDate),
     // A Custom Task has neither, and never will without a schema change:
     // Helpful Links and Dependencies are editorial acts, and a physician is
     // not an editor (ADR-0003).
@@ -493,6 +525,30 @@ function openTask(
         ? readDependencies(database, practice, task.globalTaskId, phaseInViewName)
         : [],
   };
+}
+
+/**
+ * A target date as a physician reads it, and null when there is none.
+ *
+ * Spelled out rather than `03/14/2026`, because a physician glancing at a
+ * card should not have to decide which number is the month, and fixed to
+ * one locale and to UTC so that the day stored is the day shown wherever
+ * the page was rendered.
+ */
+function asWording(day: Date | null): string | null {
+  return day ? TARGET_DATE_WORDING.format(day) : null;
+}
+
+const TARGET_DATE_WORDING = new Intl.DateTimeFormat("en-US", {
+  year: "numeric",
+  month: "long",
+  day: "numeric",
+  timeZone: "UTC",
+});
+
+/** The same day as `yyyy-mm-dd`, which is what a date field takes back. */
+function asDayValue(day: Date): string {
+  return day.toISOString().slice(0, 10);
 }
 
 function readHelpfulLinks(

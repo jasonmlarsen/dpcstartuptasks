@@ -350,6 +350,15 @@ export const customTask = sqliteTable(
     title: text("title").notNull(),
     body: text("body").notNull().default(""),
     status: text("status", { enum: TASK_STATUSES }).notNull().default("not_started"),
+    /**
+     * The same two fields a Task Entry carries, for the same reason: a
+     * Practice's writing and its deadline belong on the Task, whoever
+     * wrote the Task. They are columns here rather than a shared table
+     * because a Custom Task already belongs to exactly one Practice
+     * (ADR-0003), so there is nothing for a join to establish.
+     */
+    note: text("note"),
+    targetDate: integer("target_date", { mode: "timestamp" }),
     createdAt: integer("created_at", { mode: "timestamp" })
       .notNull()
       .default(sql`(unixepoch())`),

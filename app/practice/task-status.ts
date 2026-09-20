@@ -9,6 +9,7 @@ import {
   type TaskStatus,
 } from "~/database/schema";
 import type { CurrentPractice } from "./practice";
+import { customTaskIdIn } from "./task-ref";
 
 /**
  * Setting a Status: the one act the whole list exists for.
@@ -95,13 +96,4 @@ export function setTaskStatus(
       .returning({ id: taskEntry.id })
       .all().length > 0
   );
-}
-
-/**
- * The id inside a Custom Task's `custom-<id>` ref, or null for a Global
- * Task's slug. The same prefix the journey map writes, read back.
- */
-function customTaskIdIn(taskRef: string): number | null {
-  const match = /^custom-(\d+)$/.exec(taskRef);
-  return match ? Number(match[1]) : null;
 }

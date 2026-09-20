@@ -11,6 +11,7 @@ import {
   type RailPhase,
 } from "~/practice/journey-map";
 import { requireCurrentPractice } from "~/practice/signed-in-practice";
+import { asTargetDate, setTaskNote } from "~/practice/task-note";
 import { asTaskStatus, setTaskStatus } from "~/practice/task-status";
 import { getServices } from "~/services/services";
 import type { Route } from "./+types/phase";
@@ -43,7 +44,8 @@ export async function loader({ context, params, request }: Route.LoaderArgs) {
 }
 
 /**
- * A Status change: a plain form post, and the only write this screen makes.
+ * The two writes this screen makes: a Status change, and a Practice's own
+ * writing on a Task.
  *
  * The answer to the press is the list itself. The physician is redirected
  * back to the Phase with the drawer closed and `?moved=` naming the card
@@ -51,8 +53,15 @@ export async function loader({ context, params, request }: Route.LoaderArgs) {
  * — which is the whole point of live auto-sort, and impossible to see from
  * behind an open drawer on a phone.
  *
- * A redirect rather than a rendered response for the ordinary reason too: a
- * reload should not re-post a Status.
+ * Saving a Note is the quieter act and gets the quieter answer: the drawer
+ * stays open at the Task the physician was reading, because nothing moved
+ * and they were in the middle of something. Both are redirects for the
+ * ordinary reason too — a reload should not re-post either one.
+ *
+ * Which write it is comes from `intent`. A Status press carries none, which
+ * keeps the control that was here first posting exactly what it always
+ * posted: the ref and the Status, and nothing a browser had to be told to
+ * add.
  *
  * `?moved=` outlives the moment it describes: reloading that address plays
  * the flash again on a card that has not moved since. Accepted — the
@@ -66,6 +75,30 @@ export async function action({ context, params, request }: Route.ActionArgs) {
 
   const submitted = await request.formData();
   const taskRef = String(submitted.get("taskRef") ?? "");
+
+  if (submitted.get("intent") === "note") {
+    const targetDate = asTargetDate(submitted.get("targetDate"));
+    // Nothing is written when the date cannot be read, the Note included:
+    // half a save is worse than a refused one, because the physician would
+    // have to work out which half landed.
+    if (targetDate.kind === "unreadable") {
+      throw data("No such date", { status: 400 });
+    }
+
+    const written = {
+      taskRef,
+      note: String(submitted.get("note") ?? ""),
+      targetDate: targetDate.kind === "set" ? targetDate.on : null,
+    };
+    if (!setTaskNote(services.database, practice, written)) {
+      throw data("No such task", { status: 404 });
+    }
+
+    throw redirect(
+      `/tasks/${params.phaseSlug}?task=${encodeURIComponent(taskRef)}`,
+    );
+  }
+
   const status = asTaskStatus(submitted.get("status"));
   if (!status) throw data("No such status", { status: 400 });
 
@@ -237,11 +270,19 @@ function TaskCard({ card, phaseSlug }: { card: JourneyCard; phaseSlug: string })
           <p className="mt-1 line-clamp-2 text-sm text-gray-600">
             {card.snippet}
           </p>
-          {card.variesByState && (
-            <p className="mt-2 inline-block rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-500">
-              Varies by state
-            </p>
-          )}
+          <div className="mt-2 flex items-baseline gap-3">
+            {card.variesByState && (
+              <p className="inline-block rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-500">
+                Varies by state
+              </p>
+            )}
+            {/* The date the Practice is aiming at, said and not enforced:
+                nothing in the product chases it, and a date that has been
+                and gone is still just a date the physician wrote down. */}
+            {card.targetDate && (
+              <p className="text-xs text-gray-500">By {card.targetDate}</p>
+            )}
+          </div>
         </>
       )}
     </Link>
@@ -360,6 +401,8 @@ function TaskDrawer({
               </ul>
             </section>
           )}
+
+          <NoteSection task={task} phaseSlug={phaseSlug} />
         </div>
 
         {/* The Status control lives here, in the footer, whose padding clears
@@ -385,6 +428,98 @@ function TaskDrawer({
         </div>
       </aside>
     </>
+  );
+}
+
+/**
+ * The Note, and the target date: the only part of a Task a Practice writes.
+ *
+ * One form and one Save for both, because writing down the licence number
+ * and the day it expires is one act. It posts to the Phase's own action at
+ * zero client JS like everything else here, and the answer leaves the drawer
+ * open on the Task that was being read.
+ *
+ * The saved Note is shown above the box it is edited in, rather than the box
+ * being the only view of it: a Note is Markdown, so the line breaks and the
+ * emphasis a physician typed should read back as they meant them. Raw HTML
+ * never survives that trip — `renderPracticeBody` turns the parser's HTML
+ * off rather than cleaning up after it.
+ *
+ * A Retired Task keeps this section, unlike the Status control. Un-retiring
+ * is the Admin's act; writing down what the Practice already did is not.
+ */
+function NoteSection({
+  task,
+  phaseSlug,
+}: {
+  task: OpenTaskView;
+  phaseSlug: string;
+}) {
+  return (
+    <section className="mt-6">
+      <h3 className="text-sm font-semibold text-gray-900">Your note</h3>
+
+      {task.noteHtml && (
+        <div
+          className="body-prose mt-2 rounded-md bg-gray-50 px-3 py-2 text-gray-700"
+          dangerouslySetInnerHTML={{ __html: task.noteHtml }}
+        />
+      )}
+
+      <Form method="post" action={`/tasks/${phaseSlug}`} className="mt-2">
+        <input type="hidden" name="intent" value="note" />
+        <input type="hidden" name="taskRef" value={task.ref} />
+
+        <label htmlFor="note" className="sr-only">
+          {task.noteHtml ? "Edit your note" : "Write a note"}
+        </label>
+        <textarea
+          id="note"
+          name="note"
+          rows={4}
+          defaultValue={task.note}
+          placeholder="The licence number, the phone number, the thing the accountant said."
+          className="block w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900"
+        />
+
+        {/* The Support View disclosure, in the place it does the most work:
+            the policy is read once at registration, and this is where
+            someone is about to type the thing they would regret. ADR-0001's
+            own sentence, narrowed from *including your Notes* to the one
+            being written — a sentence and not an obligation, since Support
+            View is deliberately not consent-gated and nothing here may
+            imply a gate. */}
+        <p className="mt-1 text-xs text-gray-500">
+          Launch Tasks is run by one person. To help you when something goes
+          wrong, that person can sign in to your practice and see it exactly
+          as you do — including this note.
+        </p>
+
+        <label
+          htmlFor="target-date"
+          className="mt-4 block text-sm font-semibold text-gray-900"
+        >
+          Target date
+        </label>
+        <input
+          id="target-date"
+          type="date"
+          name="targetDate"
+          defaultValue={task.targetDateValue ?? ""}
+          className="mt-1 block rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900"
+        />
+        {/* Clearing it is emptying it, which is what a date field already
+            offers — a second control saying Clear would be a second way to
+            do the one thing. */}
+
+        <button
+          type="submit"
+          className="mt-3 rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700"
+        >
+          Save
+        </button>
+      </Form>
+    </section>
   );
 }
 
