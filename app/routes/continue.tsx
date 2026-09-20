@@ -65,7 +65,7 @@ export async function action({ context, request }: Route.ActionArgs) {
   for (const cookie of outcome.headers.getSetCookie()) {
     headers.append("Set-Cookie", cookie);
   }
-  throw redirect("/", { headers });
+  throw redirect("/tasks", { headers });
 }
 
 export default function Continue({

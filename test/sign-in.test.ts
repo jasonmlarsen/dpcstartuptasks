@@ -77,10 +77,13 @@ describe("signing in with a Sign-in Link", () => {
 
     const continued = await pressContinue(app, tokenFrom(link));
     expect(continued.status).toBe(302);
-    expect(continued.headers.get("Location")).toBe("/");
+    expect(continued.headers.get("Location")).toBe("/tasks");
 
-    const home = await app.fetch("/");
-    expect(await readable(home)).toContain(`Signed in as ${PHYSICIAN}`);
+    // The session is real, and the proof is the list opening: the journey map
+    // is behind the door, and a visitor without a session is sent back out.
+    const map = await app.fetch("/tasks/foundation-planning");
+    expect(map.status).toBe(200);
+    expect(await readable(map)).toContain("Obtain EIN");
 
     expect(app.database.select().from(user).all()).toHaveLength(1);
     expect(app.database.select().from(session).all()).toHaveLength(1);
@@ -129,7 +132,7 @@ describe("the Continue Screen", () => {
     // screen: a mail scanner fetching it first must not cost the physician
     // their login.
     const continued = await pressContinue(app, tokenFrom(link));
-    expect(continued.headers.get("Location")).toBe("/");
+    expect(continued.headers.get("Location")).toBe("/tasks");
   });
 
   it("looks identical for a good link, an expired one and a forged one", async () => {
@@ -229,7 +232,7 @@ describe("a Sign-in Link that fails", () => {
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body: new URLSearchParams({ token }),
     });
-    expect(stillGood.headers.get("Location")).toBe("/");
+    expect(stillGood.headers.get("Location")).toBe("/tasks");
 
     const app2 = newApp();
     await requestLink(app2, PHYSICIAN);
@@ -371,13 +374,17 @@ describe("the session", () => {
     await requestLink(app, PHYSICIAN);
     await pressContinue(app, tokenFrom(linkFrom(app, PHYSICIAN)));
 
-    expect(await readable(await app.fetch("/"))).toContain("Signed in as");
+    // A signed-in physician is sent to their list; a signed-out one is not.
+    expect((await app.fetch("/")).headers.get("Location")).toBe("/tasks");
 
     app.database.delete(session).run();
 
     // The cookie is untouched and still in the jar; only the row is gone.
     expect(app.cookies.size).toBeGreaterThan(0);
-    expect(await readable(await app.fetch("/"))).not.toContain("Signed in as");
+    expect((await app.fetch("/")).headers.get("Location")).toBeNull();
+    expect(
+      (await app.fetch("/tasks/foundation-planning")).headers.get("Location"),
+    ).toBe("/sign-in");
   });
 });
 

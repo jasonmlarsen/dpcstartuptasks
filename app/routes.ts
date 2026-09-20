@@ -11,6 +11,12 @@ export default [
   route("check-your-email", "routes/check-your-email.tsx"),
   route("continue", "routes/continue.tsx"),
 
+  // The journey map. The Phase in view is the URL, and so is the Task whose
+  // drawer is open, so nothing about where a physician is reading lives in a
+  // cookie or in a column.
+  route("tasks", "routes/tasks.tsx"),
+  route("tasks/:phaseSlug", "routes/phase.tsx"),
+
   route("terms", "routes/terms.tsx"),
   route("privacy", "routes/privacy.tsx"),
 ] satisfies RouteConfig;

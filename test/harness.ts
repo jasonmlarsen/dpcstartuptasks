@@ -144,3 +144,43 @@ function absorbSetCookies(response: Response, cookies: Map<string, string>) {
     }
   }
 }
+
+/**
+ * Sign in the way a physician does: the registration form, the email, the
+ * Continue Screen.
+ *
+ * There is no shortcut here on purpose — a fixture that inserted a Practice
+ * and a session directly would skip the one act that creates a Task Entry for
+ * every Task, and every test of the list would then be testing a Practice
+ * that no registration ever produced. The first call for an address registers
+ * it; every call after that just signs it back in.
+ */
+export async function signInAs(
+  app: TestApp,
+  email: string,
+  options: { emailConsent?: boolean } = {},
+): Promise<Response> {
+  const { emailConsent = true } = options;
+
+  const body = new URLSearchParams({ email });
+  // An unticked checkbox is absent from the submission, which is how a
+  // browser posts one and how a physician declines.
+  if (emailConsent) body.set("emailConsent", "on");
+
+  await app.fetch("/sign-in", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body,
+  });
+
+  const links = app.emailSender.linksTo(email);
+  const link = links.at(-1);
+  if (!link) throw new Error(`No Sign-in Link was mailed to ${email}`);
+  const token = new URL(link).searchParams.get("token") ?? "";
+
+  return app.fetch("/continue", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({ token }),
+  });
+}

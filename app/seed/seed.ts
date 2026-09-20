@@ -9,7 +9,7 @@ import {
   taskDependency,
 } from "../database/schema";
 import { parseCsv, type CsvRow } from "./csv";
-import { slugify } from "./slug";
+import { slugify } from "../lib/slug";
 
 /**
  * Where the cleaned CSV lives.

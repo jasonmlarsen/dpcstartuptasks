@@ -1,13 +1,7 @@
 import { eq } from "drizzle-orm";
 
 import type { AppDatabase } from "~/database/database";
-import {
-  customTask,
-  globalTask,
-  membership,
-  practice,
-  taskEntry,
-} from "~/database/schema";
+import { membership, practice } from "~/database/schema";
 
 /**
  * Reading a Practice, always through the User who is signed in.
@@ -43,49 +37,4 @@ export function practiceFor(
     .get();
 
   return row ?? null;
-}
-
-/** How big a Practice's list is: Tasks, and the Phases they fall into. */
-export interface TaskListSize {
-  tasks: number;
-  phases: number;
-}
-
-/**
- * The size of a Practice's list, with both content tables merged at read time.
- *
- * Two tables and one merge is the whole of ADR-0003's cost, and this is the
- * first place it is paid. A Custom Task is a Task on the list, so a count that
- * read only `task_entry` would be a count of the Task Library rather than of
- * what the physician is looking at.
- *
- * Takes a `CurrentPractice` rather than an id, so the only Practice that can
- * be counted is one `practiceFor` already handed back for the signed-in User.
- * A number would have been a number, and a caller could have got it anywhere.
- */
-export function taskListSize(
-  database: AppDatabase,
-  practice: CurrentPractice,
-): TaskListSize {
-  const entries = database
-    .select({ phaseId: globalTask.phaseId })
-    .from(taskEntry)
-    .innerJoin(globalTask, eq(taskEntry.globalTaskId, globalTask.id))
-    .where(eq(taskEntry.practiceId, practice.id))
-    .all();
-
-  const customTasks = database
-    .select({ phaseId: customTask.phaseId })
-    .from(customTask)
-    .where(eq(customTask.practiceId, practice.id))
-    .all();
-
-  const phases = new Set(
-    [...entries, ...customTasks].map((row) => row.phaseId),
-  );
-
-  return {
-    tasks: entries.length + customTasks.length,
-    phases: phases.size,
-  };
 }
