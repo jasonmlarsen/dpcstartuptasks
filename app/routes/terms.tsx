@@ -1,7 +1,10 @@
 import { Link } from "react-router";
 
-import { LegalPage, LegalSection } from "~/components/legal-page";
-import { MAIL_REPLY_TO } from "~/services/email-sender";
+import {
+  LegalContact,
+  LegalPage,
+  LegalSection,
+} from "~/components/legal-page";
 import type { Route } from "./+types/terms";
 
 export function meta(_: Route.MetaArgs) {
@@ -68,9 +71,9 @@ export default function Terms() {
         <p>
           An account is a practice. Whoever creates it is its owner, and the
           owner can invite up to two other people to work on the same list.
-          Everyone in a practice sees the same tasks, the same statuses and
-          the same notes; there is nothing in the product that is private to
-          one person within a practice.
+          The list is shared: everyone in a practice sees the same tasks, the
+          same statuses, the same notes and the same target dates, and nothing
+          written on the list is private to the person who wrote it.
         </p>
         <p>
           You are responsible for what you write here and for who you invite.
@@ -91,10 +94,6 @@ export default function Terms() {
           withdrawn at any time. A task you have already worked on is never
           taken off your list; a withdrawn one stays, marked as no longer
           required.
-        </p>
-        <p>
-          We can suspend or remove an account that is being used to attack the
-          service or to harm someone else. We will tell you if we do.
         </p>
       </LegalSection>
 
@@ -130,17 +129,13 @@ export default function Terms() {
       <LegalSection heading="Changes to these terms">
         <p>
           When these terms change, the date at the top changes with them, and
-          the previous wording stays in the project history. Continuing to use
-          Launch Tasks after that date means you accept the new wording.
+          the previous wording stays in the project history. Signing in after
+          that date means you accept the new wording, the same way signing in
+          meant you accepted this one.
         </p>
       </LegalSection>
 
-      <LegalSection heading="Getting in touch">
-        <p>
-          Write to <a href={`mailto:${MAIL_REPLY_TO}`} className="underline">{MAIL_REPLY_TO}</a>
-          . A person reads it.
-        </p>
-      </LegalSection>
+      <LegalContact />
     </LegalPage>
   );
 }

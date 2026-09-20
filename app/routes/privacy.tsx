@@ -1,7 +1,10 @@
 import { Link } from "react-router";
 
-import { LegalPage, LegalSection } from "~/components/legal-page";
-import { MAIL_REPLY_TO } from "~/services/email-sender";
+import {
+  LegalContact,
+  LegalPage,
+  LegalSection,
+} from "~/components/legal-page";
 import type { Route } from "./+types/privacy";
 
 export function meta(_: Route.MetaArgs) {
@@ -68,6 +71,15 @@ export default function Privacy() {
           feedback box, along with the page you sent it from.
         </p>
         <p>
+          The name your practice gives itself, if it gives itself one.
+        </p>
+        <p>
+          And what any website keeps in order to work: your browser, your IP
+          address and the times you signed in, held with your session and for
+          a while afterwards so that we can stop someone hammering the
+          sign-in form. Nothing in that is used to build a picture of you.
+        </p>
+        <p>
           We take no payment, so there are no card details here. Launch Tasks
           is not built to hold patient information, and you should not put any
           in it.
@@ -105,9 +117,12 @@ export default function Privacy() {
         </p>
         <p>
           Occasional other email — news, and things we have learned that may
-          help you — goes only to people who asked for it, by ticking the box
-          on the sign-in screen or from their settings page. Every one of those
-          carries an unsubscribe link, and using it is the way to stop them.
+          help you. The box asking for it is on the sign-in screen and is
+          ticked when you get there, so leaving it as it is means yes and
+          unticking it means no. We ask twice more and never again: once on a
+          card at the end of the setup questions, and after that only on your
+          settings page, where you can say yes at any time. Every one of those
+          emails carries an unsubscribe link, and using it is how they stop.
         </p>
       </LegalSection>
 
@@ -164,15 +179,7 @@ export default function Privacy() {
         </p>
       </LegalSection>
 
-      <LegalSection heading="Getting in touch">
-        <p>
-          Write to{" "}
-          <a href={`mailto:${MAIL_REPLY_TO}`} className="underline">
-            {MAIL_REPLY_TO}
-          </a>
-          . A person reads it.
-        </p>
-      </LegalSection>
+      <LegalContact />
     </LegalPage>
   );
 }

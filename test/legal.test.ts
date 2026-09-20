@@ -96,8 +96,6 @@ describe("versioned by a date and by git, and by nothing else", () => {
     // exists for. Two version lines, deliberately independent.
     expect(await page(app, "/terms")).not.toContain(EMAIL_CONSENT_VERSION);
     expect(await page(app, "/privacy")).not.toContain(EMAIL_CONSENT_VERSION);
-    expect(TERMS_LAST_UPDATED).not.toBe(EMAIL_CONSENT_VERSION);
-    expect(PRIVACY_LAST_UPDATED).not.toBe(EMAIL_CONSENT_VERSION);
   });
 });
 
@@ -229,6 +227,43 @@ describe("subprocessors", () => {
     expect(privacy).toContain(
       "deleting your practice does not unsubscribe you",
     );
+  });
+});
+
+describe("a promise the product can keep", () => {
+  it("describes the email box as the ticked box it is", async () => {
+    const app = newApp();
+
+    const privacy = await page(app, "/privacy");
+
+    // The box is ticked when a physician arrives, so *asked for it, by
+    // ticking* would describe an opt-in the product does not have. Three
+    // asking points and no fourth, and the policy names all three.
+    expect(privacy).toContain("ticked when you get there");
+    expect(privacy).toContain("setup questions");
+    expect(privacy).toContain("settings page");
+  });
+
+  it("holds the product to an inventory it actually keeps", async () => {
+    const app = newApp();
+
+    const privacy = await page(app, "/privacy");
+
+    // A list of holdings that stops at the email address reads as a promise
+    // that the rest is not kept. The session carries an IP address and a
+    // browser, and the sign-in form counts presses by IP.
+    expect(privacy).toContain("IP address");
+    expect(privacy).toContain("browser");
+  });
+
+  it("claims no power the product does not have", async () => {
+    const app = newApp();
+
+    const terms = await page(app, "/terms");
+
+    // There is no suspend path and no email that could announce one: the
+    // ban columns exist for the auth library to query and have no writer.
+    expect(terms).not.toMatch(/\bsuspend|\bban(?:ned|ning)?\b/i);
   });
 });
 

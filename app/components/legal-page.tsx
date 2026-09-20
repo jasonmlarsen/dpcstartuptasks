@@ -1,4 +1,7 @@
+import type { ReactNode } from "react";
 import { Link } from "react-router";
+
+import { MAIL_REPLY_TO } from "~/services/email-sender";
 
 /**
  * The frame both legal documents render inside.
@@ -22,7 +25,7 @@ export function LegalPage({
 }: {
   title: string;
   lastUpdated: string;
-  children: React.ReactNode;
+  children: ReactNode;
 }) {
   return (
     <main className="mx-auto max-w-2xl px-6 py-16">
@@ -46,7 +49,7 @@ export function LegalSection({
   children,
 }: {
   heading: string;
-  children: React.ReactNode;
+  children: ReactNode;
 }) {
   return (
     <section className="space-y-3">
@@ -55,5 +58,26 @@ export function LegalSection({
         {children}
       </div>
     </section>
+  );
+}
+
+/**
+ * The last section of both documents, and the same address in both.
+ *
+ * `MAIL_REPLY_TO` and not a second copy of it: this is the address a
+ * physician's reply already lands on, and a legal document naming a
+ * different one would be the first place that divergence showed.
+ */
+export function LegalContact() {
+  return (
+    <LegalSection heading="Getting in touch">
+      <p>
+        Write to{" "}
+        <a href={`mailto:${MAIL_REPLY_TO}`} className="underline">
+          {MAIL_REPLY_TO}
+        </a>
+        . A person reads it.
+      </p>
+    </LegalSection>
   );
 }
