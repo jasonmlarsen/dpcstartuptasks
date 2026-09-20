@@ -1,6 +1,7 @@
 import { data, Form, Link, redirect } from "react-router";
 
 import { TASK_STATUSES, type TaskStatus } from "~/database/schema";
+import { addCustomTask, deleteCustomTask } from "~/practice/custom-task";
 import {
   journeyMap,
   type DependencyAdvice,
@@ -40,12 +41,16 @@ export async function loader({ context, params, request }: Route.LoaderArgs) {
   });
   if (!map) throw data("No such phase", { status: 404 });
 
-  return { practiceName: practice.name, map };
+  // The delete question is a URL like everything else on this screen, so it
+  // survives a reload and a back button and costs no client JS.
+  const confirmingDelete = parameters.get("confirm") === "delete";
+
+  return { practiceName: practice.name, map, confirmingDelete };
 }
 
 /**
- * The two writes this screen makes: a Status change, and a Practice's own
- * writing on a Task.
+ * The four writes this screen makes: a Status change, a Practice's own
+ * writing on a Task, and adding or deleting a Task of the Practice's own.
  *
  * The answer to the press is the list itself. The physician is redirected
  * back to the Phase with the drawer closed and `?moved=` naming the card
@@ -57,6 +62,12 @@ export async function loader({ context, params, request }: Route.LoaderArgs) {
  * stays open at the Task the physician was reading, because nothing moved
  * and they were in the middle of something. Both are redirects for the
  * ordinary reason too — a reload should not re-post either one.
+ *
+ * Adding and deleting a Task of the Practice's own are the third and fourth.
+ * Adding answers like a Status change, with the new card flashing where it
+ * landed, because a Task written into a list of ninety-eight is worth being
+ * shown. Deleting answers with the list and no drawer: the Task the drawer
+ * was open on no longer exists, so there is nothing to return to.
  *
  * Which write it is comes from `intent`. A Status press carries none, which
  * keeps the control that was here first posting exactly what it always
@@ -75,6 +86,35 @@ export async function action({ context, params, request }: Route.ActionArgs) {
 
   const submitted = await request.formData();
   const taskRef = String(submitted.get("taskRef") ?? "");
+
+  if (submitted.get("intent") === "add-task") {
+    const added = addCustomTask(services.database, practice, {
+      phaseSlug: params.phaseSlug,
+      title: String(submitted.get("title") ?? ""),
+      body: String(submitted.get("body") ?? ""),
+    });
+
+    if (added.outcome === "no-title") {
+      throw data("A task needs a title", { status: 400 });
+    }
+    if (added.outcome === "no-phase") {
+      throw data("No such phase", { status: 404 });
+    }
+
+    throw redirect(
+      `/tasks/${params.phaseSlug}?moved=${encodeURIComponent(added.ref)}`,
+    );
+  }
+
+  if (submitted.get("intent") === "delete-task") {
+    // False covers a Global Task's slug as well as another Practice's Task:
+    // a Global Task is never deleted by anyone, it is Retired by the Admin.
+    if (!deleteCustomTask(services.database, practice, taskRef)) {
+      throw data("No such task", { status: 404 });
+    }
+
+    throw redirect(`/tasks/${params.phaseSlug}`);
+  }
 
   if (submitted.get("intent") === "note") {
     const targetDate = asTargetDate(submitted.get("targetDate"));
@@ -115,7 +155,7 @@ export async function action({ context, params, request }: Route.ActionArgs) {
 }
 
 export default function Phase({ loaderData }: Route.ComponentProps) {
-  const { practiceName, map } = loaderData;
+  const { practiceName, map, confirmingDelete } = loaderData;
 
   return (
     <div className="min-h-dvh bg-gray-50">
@@ -149,10 +189,16 @@ export default function Phase({ loaderData }: Route.ComponentProps) {
             </li>
           ))}
         </ul>
+
+        <AddTaskForm phaseSlug={map.phaseSlug} />
       </main>
 
       {map.openTask && (
-        <TaskDrawer task={map.openTask} phaseSlug={map.phaseSlug} />
+        <TaskDrawer
+          task={map.openTask}
+          phaseSlug={map.phaseSlug}
+          confirmingDelete={confirmingDelete}
+        />
       )}
     </div>
   );
@@ -331,9 +377,11 @@ function StatusLabel({
 function TaskDrawer({
   task,
   phaseSlug,
+  confirmingDelete,
 }: {
   task: OpenTaskView;
   phaseSlug: string;
+  confirmingDelete: boolean;
 }) {
   const closed = `/tasks/${phaseSlug}`;
 
@@ -403,6 +451,14 @@ function TaskDrawer({
           )}
 
           <NoteSection task={task} phaseSlug={phaseSlug} />
+
+          {task.custom && (
+            <DeleteSection
+              task={task}
+              phaseSlug={phaseSlug}
+              asking={confirmingDelete}
+            />
+          )}
         </div>
 
         {/* The Status control lives here, in the footer, whose padding clears
@@ -626,5 +682,132 @@ function HelpfulLinkRow({ link }: { link: HelpfulLinkView }) {
       </span>
       <span className="block text-xs text-gray-500">{link.domain}</span>
     </a>
+  );
+}
+
+/**
+ * The form a physician adds their own Task with.
+ *
+ * At the bottom of the Phase's list rather than behind a button somewhere
+ * else, because the four things specific to this building belong in the same
+ * list as everything else — and because the Phase is the one in view, so
+ * there is no Phase field to choose and get wrong.
+ *
+ * A title and a body, and nothing else. There is no Helpful Links field and
+ * no Dependencies picker, and there could not be one: the row has nowhere to
+ * put them (ADR-0003). Adding a Task should not be an editorial exercise,
+ * and a physician is not an editor.
+ */
+function AddTaskForm({ phaseSlug }: { phaseSlug: string }) {
+  return (
+    <section className="mt-8 rounded-lg border border-dashed border-gray-300 bg-white px-4 py-4">
+      <h3 className="text-sm font-semibold text-gray-900">
+        Add a task of your own
+      </h3>
+      <p className="mt-1 text-sm text-gray-500">
+        Something this phase needs that only your practice knows about.
+      </p>
+
+      <Form method="post" action={`/tasks/${phaseSlug}`} className="mt-3">
+        <input type="hidden" name="intent" value="add-task" />
+
+        <label htmlFor="new-task-title" className="sr-only">
+          Task title
+        </label>
+        <input
+          id="new-task-title"
+          name="title"
+          required
+          placeholder="Call the landlord back"
+          className="block w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900"
+        />
+
+        <label htmlFor="new-task-body" className="sr-only">
+          What this task involves
+        </label>
+        <textarea
+          id="new-task-body"
+          name="body"
+          rows={3}
+          placeholder="What it involves, if it needs saying."
+          className="mt-2 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900"
+        />
+
+        <button
+          type="submit"
+          className="mt-3 rounded-md bg-primary px-4 py-2 text-sm font-medium text-white"
+        >
+          Add task
+        </button>
+      </Form>
+    </section>
+  );
+}
+
+/**
+ * Deleting a Task the Practice wrote: the one thing on the list a Practice
+ * can destroy outright.
+ *
+ * Two presses, and the question is a URL — `&confirm=delete` on the drawer's
+ * own address — so it needs no client JS and survives a reload. Asking is
+ * worth a press here in a way it would not be for a Status change, because
+ * nothing brings this row back: there is no Grace Period on it and nothing
+ * for the Admin to restore, so the press is the whole of the decision.
+ *
+ * It sits at the bottom of the drawer, under the Note, where a physician
+ * reaches it deliberately rather than on the way to something else.
+ */
+function DeleteSection({
+  task,
+  phaseSlug,
+  asking,
+}: {
+  task: OpenTaskView;
+  phaseSlug: string;
+  asking: boolean;
+}) {
+  const drawer = `/tasks/${phaseSlug}?task=${encodeURIComponent(task.ref)}`;
+
+  if (!asking) {
+    return (
+      <section className="mt-8 border-t border-gray-200 pt-4">
+        <Link
+          to={`${drawer}&confirm=delete`}
+          preventScrollReset
+          className="text-sm text-gray-500 underline"
+        >
+          Delete this task
+        </Link>
+      </section>
+    );
+  }
+
+  return (
+    <section className="mt-8 border-t border-gray-200 pt-4">
+      <p className="text-sm text-gray-700">
+        Delete this task, and the note on it? This cannot be undone.
+      </p>
+
+      <div className="mt-3 flex items-center gap-3">
+        <Form method="post" action={`/tasks/${phaseSlug}`}>
+          <input type="hidden" name="intent" value="delete-task" />
+          <input type="hidden" name="taskRef" value={task.ref} />
+          <button
+            type="submit"
+            className="rounded-md border border-red-300 px-4 py-2 text-sm font-medium text-red-700"
+          >
+            Delete task
+          </button>
+        </Form>
+
+        <Link
+          to={drawer}
+          preventScrollReset
+          className="text-sm text-gray-600 underline"
+        >
+          Keep it
+        </Link>
+      </div>
+    </section>
   );
 }

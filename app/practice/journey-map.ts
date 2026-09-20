@@ -115,6 +115,13 @@ export interface OpenTaskView {
   status: TaskStatus;
   /** Retired, so the drawer reads `No longer required` and offers no control. */
   retired: boolean;
+  /**
+   * A Task this Practice wrote for itself, which is the one thing on the
+   * list it may delete outright. Nothing else in the drawer turns on it:
+   * a Custom Task carries Status, Note and target date exactly as a Global
+   * Task does, and the two are deliberately not told apart on the card.
+   */
+  custom: boolean;
   /** The Practice's own writing, exactly as it was typed, for the edit box. */
   note: string;
   /**
@@ -283,6 +290,7 @@ interface MergedGlobalTask extends MergedTaskShared {
 
 interface MergedCustomTask extends MergedTaskShared {
   kind: "custom";
+  id: number;
   createdAt: Date;
 }
 
@@ -356,6 +364,7 @@ function readCustomTasks(
     .all()
     .map((row) => ({
       kind: "custom" as const,
+      id: row.id,
       ref: customRef(row.id),
       title: row.title,
       body: row.body,
@@ -381,7 +390,11 @@ function byStatusThenLibraryOrder(left: MergedTask, right: MergedTask): number {
     return left.position - right.position;
   }
   if (left.kind === "custom" && right.kind === "custom") {
-    return left.createdAt.getTime() - right.createdAt.getTime();
+    const byAge = left.createdAt.getTime() - right.createdAt.getTime();
+    // `created_at` is whole seconds, so two Tasks written in the same one
+    // tie. The id breaks it in the order they were written, which is the
+    // order the physician typed them and the only one they would expect.
+    return byAge !== 0 ? byAge : left.id - right.id;
   }
   return left.kind === "global" ? -1 : 1;
 }
@@ -507,6 +520,7 @@ function openTask(
         : renderPracticeBody(task.body),
     status: task.status,
     retired: isRetired(task),
+    custom: task.kind === "custom",
     note: task.note ?? "",
     // A Note is a Practice's own writing, so it goes through the parser
     // that will not emit HTML whatever it is handed — never the Admin's.
