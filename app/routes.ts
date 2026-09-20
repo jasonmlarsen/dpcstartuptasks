@@ -44,6 +44,11 @@ export default [
   route("admin", "routes/admin.tsx", [
     index("routes/admin/practices.tsx"),
     route("library", "routes/admin/library.tsx"),
+    // The Task edit screen is the one page under a section rather than
+    // beside it: the Library is a list of ninety-eight things and the Body
+    // needs a page of its own. The four sections stay flat — this is not a
+    // fifth, and the Library tab stays lit while it is open.
+    route("library/tasks/:taskId", "routes/admin/library-task.tsx"),
     route("system", "routes/admin/system.tsx"),
     route("feedback", "routes/admin/feedback.tsx"),
   ]),

@@ -25,8 +25,9 @@ import {
  * a boundary and not a delay.
  *
  * Support View is #40 and nothing here asserts anything about entering a
- * Practice; the Library, System and Feedback sections are stubs on purpose
- * and are tested only as far as being four navigable sections.
+ * Practice; the System and Feedback sections are stubs on purpose and are
+ * tested only as far as being four navigable sections. The Library is built
+ * (#37) and has a test file of its own.
  */
 
 const ADMIN = "operator@directcaretools.com";
@@ -235,11 +236,11 @@ describe("the four sections", () => {
     expect(page).toContain('href="/admin/feedback"');
   });
 
-  it("are flat, and the three that are not built say so", async () => {
+  it("are flat, and the two that are not built say so", async () => {
     const app = newApp();
     await signInAsAdmin(app);
 
-    for (const path of ["/admin/library", "/admin/system", "/admin/feedback"]) {
+    for (const path of ["/admin/system", "/admin/feedback"]) {
       const response = await app.fetch(path);
       expect(response.status).toBe(200);
       expect(await readable(response)).toContain("Not built yet.");

@@ -12,6 +12,7 @@ import {
   type Progress,
   type RailPhase,
 } from "~/practice/journey-map";
+import { acknowledgeTask } from "~/practice/newly-added";
 import { requirePracticeForList } from "~/practice/signed-in-practice";
 import { asTargetDate, setTaskNote } from "~/practice/task-note";
 import { asTaskStatus, setTaskStatus } from "~/practice/task-status";
@@ -35,6 +36,13 @@ export async function loader({ context, params, request }: Route.LoaderArgs) {
   const practice = await requirePracticeForList(services, request);
 
   const parameters = new URL(request.url).searchParams;
+
+  // Before the map is read, not after: opening the Task is what clears
+  // Newly Added, so the page the physician is handed back is already the
+  // one without the flag on it.
+  const opening = parameters.get("task");
+  if (opening) acknowledgeTask(services.database, practice, opening);
+
   const map = journeyMap(services.database, practice, {
     phaseSlug: params.phaseSlug,
     taskRef: parameters.get("task"),
@@ -303,6 +311,14 @@ function TaskCard({ card, phaseSlug }: { card: JourneyCard; phaseSlug: string })
           className={`font-medium ${setAside ? "text-gray-500" : "text-gray-900"}`}
         >
           {card.title}
+          {/* Newly Added, said in the physician's words and not the
+              column's: this arrived after you did, and nobody here has
+              opened it yet. Pressing the card is what clears it. */}
+          {card.newlyAdded && (
+            <span className="ml-2 rounded-full bg-primary/10 px-2 py-0.5 align-middle text-xs font-medium text-primary">
+              Newly added
+            </span>
+          )}
         </span>
         <StatusLabel status={card.status} retired={card.retired} />
       </div>

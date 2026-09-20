@@ -1,6 +1,6 @@
 import { createHash, randomBytes } from "node:crypto";
 
-import { and, desc, eq, gt, isNotNull, isNull, ne, or } from "drizzle-orm";
+import { and, desc, eq, gt, isNull } from "drizzle-orm";
 
 import { setDisplayName, type SignedInUser } from "~/auth/server";
 import { appUrl } from "~/auth/config";
@@ -18,6 +18,7 @@ import type { AppServices } from "~/services/services";
 import { practiceIsLive } from "./deletion";
 import { hasRoom, memberCount, pendingInvitesOf, roomForAnotherMember } from "./people";
 import type { CurrentPractice } from "./practice";
+import { didSomething } from "./task-entry-work";
 
 /**
  * An Invite: an Owner's outstanding offer of a Membership to an email address.
@@ -434,16 +435,7 @@ function untouched(database: AppWriter, practiceId: number): boolean {
   const worked = database
     .select({ id: taskEntry.id })
     .from(taskEntry)
-    .where(
-      and(
-        eq(taskEntry.practiceId, practiceId),
-        or(
-          ne(taskEntry.status, "not_started"),
-          isNotNull(taskEntry.note),
-          isNotNull(taskEntry.targetDate),
-        ),
-      ),
-    )
+    .where(and(eq(taskEntry.practiceId, practiceId), didSomething()))
     .limit(1)
     .get();
 

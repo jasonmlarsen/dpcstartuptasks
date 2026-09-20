@@ -10,6 +10,7 @@ import {
   taskEntry,
   type TaskStatus,
 } from "~/database/schema";
+import { destinationOf } from "~/lib/link-destination";
 import {
   bodyAsPlainText,
   renderGlobalBody,
@@ -84,6 +85,12 @@ export interface JourneyCard {
    * drawer, which is the whole reason a date is worth setting.
    */
   targetDate: string | null;
+  /**
+   * Newly Added: published after this Practice already existed, and not yet
+   * opened by anyone in it. Tasks present at creation are never flagged, and
+   * the flag is cleared by opening the drawer — see `newly-added.ts`.
+   */
+  newlyAdded: boolean;
   open: boolean;
   /** The card that just moved, which flashes where it landed for 900ms. */
   landed: boolean;
@@ -249,6 +256,9 @@ export function journeyMap(
           : null,
       targetDate:
         setAside(task) ? null : asWording(task.targetDate),
+      // Never on a card that is set aside: a Task nobody opened cannot
+      // be Not Applicable, and a Retired one is not news.
+      newlyAdded: !setAside(task) && isNewlyAdded(task),
       open: task.ref === view.taskRef,
       landed: task.ref === view.movedRef,
     })),
@@ -296,6 +306,9 @@ interface MergedGlobalTask extends MergedTaskShared {
   position: number;
   /** Set once the Admin has Retired it. Null for every live Task. */
   retiredAt: Date | null;
+  /** The two halves of Newly Added, kept apart until the predicate below. */
+  announcedAt: Date | null;
+  acknowledgedAt: Date | null;
 }
 
 interface MergedCustomTask extends MergedTaskShared {
@@ -321,6 +334,8 @@ function readGlobalTasks(
       status: taskEntry.status,
       note: taskEntry.note,
       targetDate: taskEntry.targetDate,
+      announcedAt: taskEntry.announcedAt,
+      acknowledgedAt: taskEntry.acknowledgedAt,
     })
     .from(taskEntry)
     .innerJoin(globalTask, eq(taskEntry.globalTaskId, globalTask.id))
@@ -346,6 +361,8 @@ function readGlobalTasks(
       stateSpecific: row.stateSpecific,
       position: row.position,
       retiredAt: row.retiredAt,
+      announcedAt: row.announcedAt,
+      acknowledgedAt: row.acknowledgedAt,
     }));
 }
 
@@ -407,6 +424,22 @@ function byStatusThenLibraryOrder(left: MergedTask, right: MergedTask): number {
     return byAge !== 0 ? byAge : left.id - right.id;
   }
   return left.kind === "global" ? -1 : 1;
+}
+
+/**
+ * Newly Added: announced to this Practice, and not yet opened by anyone in
+ * it.
+ *
+ * A Custom Task can never be one — a Practice does not announce a Task to
+ * itself — and neither can a Task the Practice was born with, whose
+ * `announced_at` is null forever.
+ */
+function isNewlyAdded(task: MergedTask): boolean {
+  return (
+    task.kind === "global" &&
+    task.announcedAt !== null &&
+    task.acknowledgedAt === null
+  );
 }
 
 /** A Retired Task: withdrawn from the Library, and kept because this Practice touched it. */
@@ -586,33 +619,6 @@ function readHelpfulLinks(
     .orderBy(asc(helpfulLink.position))
     .all()
     .map((row) => ({ label: row.label, ...destinationOf(row.url) }));
-}
-
-/**
- * Where a Helpful Link goes, and what to say beneath its label.
- *
- * A URL that is missing, unparseable, or not something a browser should
- * navigate to gets no `href` at all. The Seed refuses a blank URL, so this
- * covers the admin panel and nothing else — which is exactly the case that
- * needs covering, since a half-typed link should read as a gap in the
- * content rather than as a broken promise.
- */
-function destinationOf(url: string): { href: string | null; domain: string | null } {
-  let parsed: URL;
-  try {
-    parsed = new URL(url.trim());
-  } catch {
-    return { href: null, domain: null };
-  }
-
-  if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
-    return { href: null, domain: null };
-  }
-
-  return {
-    href: parsed.href,
-    domain: parsed.hostname.replace(/^www\./, ""),
-  };
 }
 
 /**
