@@ -1,6 +1,6 @@
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
-import { magicLink } from "better-auth/plugins";
+import { admin, magicLink } from "better-auth/plugins";
 
 import {
   account,
@@ -159,6 +159,50 @@ function cookiePairs(headers: Headers): string {
     .join("; ");
 }
 
+/**
+ * The role a User must hold to reach the admin panel.
+ *
+ * The plugin's default, kept: `admin` is what its own `adminRoles` looks
+ * for, and renaming it would buy a word nobody reads and a setting that has
+ * to agree with a SQL statement typed by hand on a server.
+ */
+export const ADMIN_ROLE = "admin";
+
+/**
+ * Who is signed in and is the Admin, or nobody.
+ *
+ * The role check lives here rather than at the routes, so that no page
+ * learns the word `role`, that the guard is a column, or that Better Auth
+ * has an `admin` plugin at all (ADR-0004). A route asks *is this the
+ * Admin*, and the answer is a User or nothing.
+ *
+ * Nothing in the app ever writes this column. Promotion is a SQL statement
+ * on the VPS — `docs/runbooks/admin-access.md` — which is not a limitation
+ * of this function but the point of it: an endpoint that could grant the
+ * role is an endpoint that can be attacked, and there are at most a handful
+ * of Admins for the life of the product.
+ *
+ * The comparison is exact, and deliberately stricter than the plugin's own:
+ * Better Auth reads `role` as a comma-separated list and would accept
+ * `admin,user`. One value is the invariant the runbook's `UPDATE` writes,
+ * and the strictness fails in the safe direction — a row nobody meant to
+ * write is refused rather than let in. If that ever has to change, it
+ * changes here and nowhere else.
+ */
+export async function getSignedInAdmin(
+  services: AppServices,
+  request: Request,
+): Promise<SignedInUser | null> {
+  const auth = authFor(services);
+  const result = await auth.api.getSession({ headers: request.headers });
+  if (!result) return null;
+
+  const { id, email, name, role } = result.user;
+  if (role !== ADMIN_ROLE) return null;
+
+  return { id, email, name };
+}
+
 /** Who is signed in, or nobody. Read from the database on every request. */
 export async function getSignedInUser(
   services: AppServices,
@@ -313,6 +357,14 @@ function createAuth(services: AppServices) {
     },
 
     plugins: [
+      // The admin panel's guard, and in v1 nothing else: one `role` column
+      // that `getSignedInAdmin` reads and no code anywhere writes. None of
+      // the plugin's own endpoints are reachable — `auth.handler` is never
+      // mounted (ADR-0004) — so installing it adds a column and a question,
+      // not a surface. `impersonateUser` is called directly when Support
+      // View lands (#40); until then this is a role check.
+      admin(),
+
       magicLink({
         expiresIn: SIGN_IN_LINK_LIFETIME_SECONDS,
         // The default stores the token in plaintext, which would make a copy

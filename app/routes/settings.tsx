@@ -8,6 +8,7 @@ import {
   grantEmailConsent,
 } from "~/consent/email-consent";
 import { PRACTICE_PEOPLE_CAP, PRACTICE_STATES } from "~/database/schema";
+import { asPlainDate } from "~/lib/plain-date";
 import { deletePractice } from "~/practice/deletion";
 import {
   inviteToPractice,
@@ -188,15 +189,6 @@ export async function action({ context, request }: Route.ActionArgs) {
   }
 
   throw data("No such action", { status: 400 });
-}
-
-/** A date as a physician reads it: *3 March 2026*. */
-function asPlainDate(when: Date): string {
-  return when.toLocaleDateString("en-GB", {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  });
 }
 
 export default function Settings({

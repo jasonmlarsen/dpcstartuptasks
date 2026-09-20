@@ -2,10 +2,13 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
+import { eq } from "drizzle-orm";
 import { createRequestHandler } from "react-router";
 import * as serverBuild from "virtual:react-router/server-build";
 
+import { ADMIN_ROLE } from "~/auth/server";
 import { createDatabase, type AppDatabase } from "~/database/database";
+import { user } from "~/database/schema";
 import { seed, TASK_LIBRARY_CSV_PATH } from "~/seed/seed";
 import { createServicesContext, type AppServices } from "~/services/services";
 import { FakeEmailSender } from "./fakes/fake-email-sender";
@@ -204,4 +207,25 @@ export async function skipTailoringWizard(app: TestApp): Promise<Response> {
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({ intent: "skip" }),
   });
+}
+
+/**
+ * Promote a User to Admin the only way the product allows: a SQL statement.
+ *
+ * There is no function in `app/` to call here, and that is the feature
+ * being exercised rather than a gap in the harness — promotion is an
+ * `UPDATE` typed on the VPS (`docs/runbooks/admin-access.md`), so a test
+ * that reached for an app-side helper would be testing a door the spec says
+ * must not exist. This is that statement, against the test's own file.
+ */
+export function promoteToAdmin(app: TestApp, email: string): void {
+  const changed = app.database
+    .update(user)
+    .set({ role: ADMIN_ROLE })
+    .where(eq(user.email, email))
+    .run();
+
+  if (changed.changes === 0) {
+    throw new Error(`No user to promote: ${email}`);
+  }
 }

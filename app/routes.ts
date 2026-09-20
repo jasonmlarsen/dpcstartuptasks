@@ -36,6 +36,18 @@ export default [
   // dialog is client JS; the page and the Task ride in on the address.
   route("feedback", "routes/feedback.tsx"),
 
+  // The admin panel: the same app, a different door. Four flat sections
+  // behind one role, and the Practices list is the index because it is the
+  // page the Admin opens without being sent there. Everything under here is
+  // a 404 for everyone who is not the Admin, including a visitor with no
+  // session — the refusal has to be the same one an unserved address gets.
+  route("admin", "routes/admin.tsx", [
+    index("routes/admin/practices.tsx"),
+    route("library", "routes/admin/library.tsx"),
+    route("system", "routes/admin/system.tsx"),
+    route("feedback", "routes/admin/feedback.tsx"),
+  ]),
+
   route("terms", "routes/terms.tsx"),
   route("privacy", "routes/privacy.tsx"),
 ] satisfies RouteConfig;

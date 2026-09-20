@@ -161,6 +161,27 @@ export const user = sqliteTable("user", {
     mode: "timestamp",
   }),
   emailConsentVersion: text("email_consent_version"),
+
+  /**
+   * The four columns Better Auth's `admin` plugin declares on this table.
+   *
+   * `role` is the whole of the admin panel's guard, and it is deliberately
+   * write-only from outside the app: promotion to Admin is a SQL statement
+   * run on the VPS (`docs/runbooks/admin-access.md`), never a screen, so
+   * there is no endpoint to attack and nothing to get wrong twice. Null and
+   * `user` both mean *not the Admin*; the plugin writes `user` onto every
+   * User it creates.
+   *
+   * The three ban columns have no reader and no writer in this product —
+   * nobody is ever banned, and there is no screen that could do it. They are
+   * here because the plugin's own session hook reads `banned` on every sign
+   * in, so a table without them is a table the library cannot query. Declared
+   * rather than used, and that is the whole of their story.
+   */
+  role: text("role"),
+  banned: integer("banned", { mode: "boolean" }).default(false),
+  banReason: text("ban_reason"),
+  banExpires: integer("ban_expires", { mode: "timestamp" }),
 });
 
 export const session = sqliteTable("session", {
@@ -175,6 +196,15 @@ export const session = sqliteTable("session", {
   userId: text("user_id")
     .notNull()
     .references(() => user.id, { onDelete: "cascade" }),
+
+  /**
+   * Set on the borrowed session Support View creates, naming the Admin who
+   * is looking (ADR-0001). Nothing reads it yet — Support View is #40 — and
+   * it is here now because it is the other half of the same plugin schema as
+   * the four columns on `user`, and a table the library declares a field on
+   * is a table that should have it.
+   */
+  impersonatedBy: text("impersonated_by"),
 });
 
 /**
