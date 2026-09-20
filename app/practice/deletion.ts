@@ -1,5 +1,6 @@
 import { and, eq, isNull } from "drizzle-orm";
 
+import { endSupportViewsFor } from "~/admin/support-view";
 import { revokeAllSessions } from "~/auth/server";
 import type { AppWriter } from "~/database/database";
 import { membership, practice } from "~/database/schema";
@@ -52,6 +53,15 @@ export type DeletionOutcome =
  * Every Membership, the Owner's own included: there is nothing left to read
  * here for anybody, and an Owner who deleted their Practice and stayed
  * signed in would be looking at a list the product has stopped serving.
+ *
+ * An Admin inside this Practice in Support View goes with them, and that is
+ * the rule rather than a side effect (ADR-0001): the view *is* a session
+ * belonging to the Owner, so revoking the Owner's sessions ends it, and
+ * there is deliberately **no carve-out exempting impersonation rows** — one
+ * would leave the operator holding writable access to a Practice that had
+ * just been deleted. Why it ended is written here, in the same transaction
+ * as the column, because afterwards a deleted session row is
+ * indistinguishable from any other deleted session row.
  */
 export async function deletePractice(
   services: AppServices,
@@ -70,11 +80,17 @@ export async function deletePractice(
     await revokeAllSessions(services, person.userId);
   }
 
-  services.database
-    .update(practice)
-    .set({ deletedAt: now })
-    .where(eq(practice.id, current.id))
-    .run();
+  services.database.transaction((transaction) => {
+    for (const person of everyone) {
+      endSupportViewsFor(transaction, person.userId, "practice_deleted", now);
+    }
+
+    transaction
+      .update(practice)
+      .set({ deletedAt: now })
+      .where(eq(practice.id, current.id))
+      .run();
+  });
 
   return "deleted";
 }

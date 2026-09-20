@@ -1,5 +1,7 @@
 import type { ReactNode } from "react";
-import { Link, useLocation } from "react-router";
+import { Link, useLocation, useRouteLoaderData } from "react-router";
+
+import type { loader as rootLoader } from "~/root";
 
 /**
  * The bar across the top of every page behind the door.
@@ -20,13 +22,14 @@ import { Link, useLocation } from "react-router";
  * The item suppresses itself on the feedback page, which is the one page
  * where it would lead where the physician already is.
  *
- * One more suppression is owed here and is not written yet: **Support View
- * hides the Send feedback item** for as long as it lasts, so that the Admin
- * can never file a Feedback in the Owner's name. It is not a check this
- * file can make while Support View does not exist, and this is the single
- * place it will go when it does — `sendFeedback` takes its author from the
- * session, so an Admin pressing this item inside a Practice would write the
- * Owner's id onto the row.
+ * It suppresses itself a second time for the whole of a **Support View**, so
+ * that the Admin can never file a Feedback in the Owner's name:
+ * `sendFeedback` takes its author from the session, so an Admin pressing
+ * this item inside a Practice would write the Owner's id onto the row. The
+ * flag is read off the root loader rather than passed down, because the bar
+ * appears on four pages and a prop is a prop one of them would forget; the
+ * page itself refuses the same request, since a hidden link is not the same
+ * promise as *never*.
  */
 export function AppBar({
   title,
@@ -41,6 +44,8 @@ export function AppBar({
 }) {
   const location = useLocation();
   const onFeedbackPage = location.pathname === "/feedback";
+  const root = useRouteLoaderData<typeof rootLoader>("root");
+  const inSupportView = root?.supportView != null;
 
   return (
     <header className="border-b border-gray-200 bg-white">
@@ -50,7 +55,7 @@ export function AppBar({
         <h1 className="text-lg font-semibold text-gray-900">{title}</h1>
         <div className="flex items-baseline gap-4">
           {children}
-          {!onFeedbackPage && (
+          {!onFeedbackPage && !inSupportView && (
             <Link
               to={sendFeedbackLink(location.pathname, location.search)}
               className="text-sm text-gray-600 underline"

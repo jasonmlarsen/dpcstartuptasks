@@ -36,6 +36,11 @@ export default [
   // dialog is client JS; the page and the Task ride in on the address.
   route("feedback", "routes/feedback.tsx"),
 
+  // The banner's Stop button. A POST-only address outside `/admin`, because
+  // for the whole of a Support View the Admin's session is the Owner's and
+  // every admin address answers them with a 404.
+  route("support-view", "routes/support-view.tsx"),
+
   // The admin panel: the same app, a different door. Four flat sections
   // behind one role, and the Practices list is the index because it is the
   // page the Admin opens without being sent there. Everything under here is

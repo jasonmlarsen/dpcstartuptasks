@@ -304,6 +304,341 @@ export async function setDisplayName(
   await context.internalAdapter.updateUser(userId, { name });
 }
 
+/**
+ * How long a Support View lasts, in seconds, and it never extends.
+ *
+ * An hour is long enough to reproduce a bug and short enough that a forgotten
+ * tab is not a standing key into somebody's practice (#5).
+ */
+export const SUPPORT_VIEW_LIFETIME_SECONDS = 3600;
+
+/** A Support View in progress, as seen from the request carrying it. */
+export interface SupportViewSession {
+  /** The Admin who is looking. */
+  adminUserId: string;
+  /** The Owner they are looking as. */
+  targetUserId: string;
+}
+
+/**
+ * Begin acting as another User.
+ *
+ * `impersonateUser` does three things at once, and all three matter: it
+ * creates a **new session row owned by the target**, it stashes the Admin's
+ * own session token in a separate signed `admin_session` cookie, and it swaps
+ * the session cookie over. The first is why `deleteUserSessions` on the
+ * target ends the view; the second is why the Admin's own account survives
+ * that and can be handed back to them (ADR-0001).
+ *
+ * The returned headers carry every cookie of that swap, so the caller has to
+ * answer with them. `expiresAt` is the hour, returned because the caller
+ * records it — it is the only thing that can say afterwards whether the hour
+ * had run out.
+ */
+export async function startActingAs(
+  services: AppServices,
+  request: Request,
+  targetUserId: string,
+  now: Date = new Date(),
+): Promise<{ headers: Headers; expiresAt: Date } | null> {
+  const auth = authFor(services);
+
+  const response = await auth.api.impersonateUser({
+    body: { userId: targetUserId },
+    headers: request.headers,
+    asResponse: true,
+  });
+
+  // The plugin refuses on its own account for reasons this app has already
+  // ruled out upstream — no session, not the Admin, no such User, or a
+  // target who is an Admin too. Nothing here can improve on *it did not
+  // happen*, so the caller is told that and no more.
+  if (!response.ok) return null;
+
+  return {
+    headers: response.headers,
+    expiresAt: new Date(now.getTime() + SUPPORT_VIEW_LIFETIME_SECONDS * 1000),
+  };
+}
+
+/**
+ * Stop acting as another User, deliberately, while the borrowed session is
+ * still alive.
+ *
+ * The library's own exit, and the only path where it works: it reads
+ * `impersonatedBy` off the live session, so it is useless the moment that row
+ * is gone — which is the whole reason `restoreAdmin` below exists.
+ */
+export async function stopActingAs(
+  services: AppServices,
+  request: Request,
+): Promise<Headers | null> {
+  const auth = authFor(services);
+
+  const response = await auth.api.stopImpersonating({
+    headers: request.headers,
+    asResponse: true,
+  });
+
+  return response.ok ? response.headers : null;
+}
+
+/**
+ * Whoever is signed in is being acted as by an Admin, or nobody is.
+ *
+ * Asked on every request, because the banner is owed on every page — so it
+ * refuses on the cookie header before it touches the database. Without that,
+ * every signed-out visit to the landing page would carry a session read for
+ * a banner that could not possibly be shown.
+ */
+export async function currentlyActingAs(
+  services: AppServices,
+  request: Request,
+): Promise<SupportViewSession | null> {
+  if (!(request.headers.get("Cookie") ?? "").includes(SESSION_COOKIE)) {
+    return null;
+  }
+
+  const auth = authFor(services);
+  const result = await auth.api.getSession({ headers: request.headers });
+  if (!result) return null;
+
+  const adminUserId = result.session.impersonatedBy;
+  if (!adminUserId) return null;
+
+  return { adminUserId, targetUserId: result.user.id };
+}
+
+/**
+ * The Admin's own account, handed back when the floor disappears underneath
+ * them.
+ *
+ * Fires on any request where the session cookie resolves to nothing **and** a
+ * valid `admin_session` cookie is present — which is every way a Support View
+ * can end other than the Admin's own press: the hour, the Owner deleting the
+ * Practice, the Purge. One path for all three, because building it only for
+ * revocation would leave the most frequent version unfixed (#21).
+ *
+ * The **role check is the part that is easy to miss**. `stopImpersonating`
+ * validates the restored session against `session.impersonatedBy`; this
+ * cannot, because the row carrying `impersonatedBy` is the row that was
+ * deleted. The `admin` role is what replaces it, and without it a stale
+ * signed cookie would be a way back into somebody's account.
+ *
+ * Returns the headers that restore the Admin — their own session cookie
+ * back, the stash expired — or null when there is nothing to hand back, in
+ * which case the request is what it looks like: signed out.
+ */
+export async function restoreAdmin(
+  services: AppServices,
+  request: Request,
+): Promise<{ headers: Headers; admin: SignedInUser } | null> {
+  // The cheap refusal first, and it is the one almost every request takes:
+  // no stash in the cookie header means no Support View has ever run in this
+  // browser, and nothing below has to be built or read.
+  if (!(request.headers.get("Cookie") ?? "").includes(ADMIN_SESSION_COOKIE)) {
+    return null;
+  }
+
+  const auth = authFor(services);
+  const context = await auth.$context;
+  const cookie = context.createAuthCookie(ADMIN_SESSION_COOKIE);
+
+  const stashed = await readSignedCookie(request, cookie.name, context.secret);
+  if (!stashed) return null;
+
+  // Still resolving to somebody means nothing has ended: either the Support
+  // View is live, or the Admin is already back. Either way, hands off.
+  const live = await auth.api.getSession({ headers: request.headers });
+  if (live) return null;
+
+  // `token:dontRememberMe`, the shape `impersonateUser` wrote.
+  const [token] = stashed.split(":");
+  if (!token) return null;
+
+  const restored = await context.internalAdapter.findSession(token);
+  if (!restored || restored.user.role !== ADMIN_ROLE) return null;
+
+  const headers = new Headers();
+  headers.append(
+    "Set-Cookie",
+    serialiseCookie(
+      context.authCookies.sessionToken.name,
+      await signCookieValue(restored.session.token, context.secret),
+      {
+        ...context.authCookies.sessionToken.attributes,
+        maxAge: context.sessionConfig.expiresIn,
+      },
+    ),
+  );
+
+  // The borrowed session was created `dontRememberMe`, which left a cookie
+  // saying so. Left behind, it would stop the Admin's own session from ever
+  // refreshing again.
+  headers.append(
+    "Set-Cookie",
+    expiredCookie(context.authCookies.dontRememberToken),
+  );
+
+  // The stash is spent. Without this it outlives the view it belonged to by
+  // days, because it inherits the session cookie's attributes (#21).
+  headers.append("Set-Cookie", expiredCookie(cookie));
+
+  const { id, email, name } = restored.user;
+  return { headers, admin: { id, email, name } };
+}
+
+/**
+ * Better Auth's name for the cookie the Admin's own session is stashed in.
+ * Written only by `impersonateUser` and expired only by `stopImpersonating`
+ * and by `restoreAdmin`; nothing else in 1.7.5 touches it.
+ */
+const ADMIN_SESSION_COOKIE = "admin_session";
+
+/**
+ * The tail of Better Auth's session cookie name, whatever prefix a
+ * deployment gives it. Used only to refuse early; the cookie's value is
+ * never read here.
+ */
+const SESSION_COOKIE = "session_token";
+
+/**
+ * A cookie with attributes, as Better Auth's own cookie getter describes one.
+ */
+interface CookieToSet {
+  name: string;
+  attributes: {
+    domain?: string;
+    httpOnly?: boolean;
+    maxAge?: number;
+    path?: string;
+    secure?: boolean;
+    sameSite?: string;
+  };
+}
+
+/**
+ * The three cookie helpers below are Better Auth's own, reimplemented here
+ * because they are not exported.
+ *
+ * Signing is HMAC-SHA256 over the value, base64, appended after a `.` and
+ * URI-encoded whole — twenty lines of `better-call`, which is a transitive
+ * dependency of Better Auth and not one of ours. Vendoring the algorithm into
+ * the one module that already owns this library is the smaller of the two
+ * costs; the other is a direct dependency on a package nothing else here
+ * imports, pinned by a library that is itself pre-2.0.
+ *
+ * The drift this risks is caught rather than hoped about: the Support View
+ * tests run a real round trip both ways — `impersonateUser` writes the stash
+ * and `readSignedCookie` verifies it, then `signCookieValue` writes the
+ * session cookie and Better Auth's own `getSession` reads it back. A format
+ * change in a version bump fails those tests rather than the rescue in
+ * production.
+ */
+async function signCookieValue(value: string, secret: string): Promise<string> {
+  const key = await crypto.subtle.importKey(
+    "raw",
+    new TextEncoder().encode(secret),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign", "verify"],
+  );
+  const signature = await crypto.subtle.sign(
+    "HMAC",
+    key,
+    new TextEncoder().encode(value),
+  );
+  const encoded = btoa(String.fromCharCode(...new Uint8Array(signature)));
+
+  return encodeURIComponent(`${value}.${encoded}`);
+}
+
+/**
+ * The value of a signed cookie, or null if it is absent or has been tampered
+ * with.
+ */
+async function readSignedCookie(
+  request: Request,
+  name: string,
+  secret: string,
+): Promise<string | null> {
+  const header = request.headers.get("Cookie");
+  if (!header) return null;
+
+  const raw = header
+    .split(";")
+    .map((pair) => pair.trim())
+    .find((pair) => pair.slice(0, pair.indexOf("=")) === name);
+  if (raw === undefined) return null;
+
+  let decoded: string;
+  try {
+    decoded = decodeURIComponent(raw.slice(raw.indexOf("=") + 1));
+  } catch {
+    return null;
+  }
+
+  const separator = decoded.lastIndexOf(".");
+  if (separator < 1) return null;
+
+  const value = decoded.slice(0, separator);
+  const signature = decoded.slice(separator + 1);
+
+  const key = await crypto.subtle.importKey(
+    "raw",
+    new TextEncoder().encode(secret),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign", "verify"],
+  );
+
+  let bytes: ArrayBuffer;
+  try {
+    const binary = atob(signature);
+    bytes = Uint8Array.from(binary, (character) => character.charCodeAt(0))
+      .buffer as ArrayBuffer;
+  } catch {
+    return null;
+  }
+
+  const verified = await crypto.subtle.verify(
+    "HMAC",
+    key,
+    bytes,
+    new TextEncoder().encode(value),
+  );
+
+  return verified ? value : null;
+}
+
+function serialiseCookie(
+  name: string,
+  value: string,
+  attributes: CookieToSet["attributes"],
+): string {
+  const parts = [`${name}=${value}`];
+
+  if (typeof attributes.maxAge === "number") {
+    parts.push(`Max-Age=${Math.floor(attributes.maxAge)}`);
+  }
+  if (attributes.domain) parts.push(`Domain=${attributes.domain}`);
+  if (attributes.path) parts.push(`Path=${attributes.path}`);
+  if (attributes.httpOnly) parts.push("HttpOnly");
+  if (attributes.secure) parts.push("Secure");
+  if (attributes.sameSite) {
+    const sameSite = attributes.sameSite;
+    parts.push(
+      `SameSite=${sameSite.charAt(0).toUpperCase()}${sameSite.slice(1)}`,
+    );
+  }
+
+  return parts.join("; ");
+}
+
+function expiredCookie(cookie: CookieToSet): string {
+  return serialiseCookie(cookie.name, "", { ...cookie.attributes, maxAge: 0 });
+}
+
 type Auth = ReturnType<typeof createAuth>;
 
 /**
@@ -357,13 +692,19 @@ function createAuth(services: AppServices) {
     },
 
     plugins: [
-      // The admin panel's guard, and in v1 nothing else: one `role` column
-      // that `getSignedInAdmin` reads and no code anywhere writes. None of
-      // the plugin's own endpoints are reachable — `auth.handler` is never
-      // mounted (ADR-0004) — so installing it adds a column and a question,
-      // not a surface. `impersonateUser` is called directly when Support
-      // View lands (#40); until then this is a role check.
-      admin(),
+      // The admin panel's guard, and Support View's engine. None of the
+      // plugin's own endpoints are reachable — `auth.handler` is never
+      // mounted (ADR-0004) — so installing it adds two columns and a
+      // question, not a surface: `impersonateUser` and `stopImpersonating`
+      // are called from `auth.api` by this file and by nothing else.
+      admin({
+        // The plugin's own default, written out rather than inherited: the
+        // hour is a product decision (#5) and the one number a reader of
+        // this file would come looking for. It does not extend — the
+        // borrowed session is created `dontRememberMe`, which is what turns
+        // Better Auth's rolling refresh off for it.
+        impersonationSessionDuration: SUPPORT_VIEW_LIFETIME_SECONDS,
+      }),
 
       magicLink({
         expiresIn: SIGN_IN_LINK_LIFETIME_SECONDS,

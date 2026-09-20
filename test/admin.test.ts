@@ -24,10 +24,12 @@ import {
  * and **none of its contents**, because that is what makes the thirty days
  * a boundary and not a delay.
  *
- * Support View is #40 and nothing here asserts anything about entering a
- * Practice; the System section is a stub on purpose and is tested only as
- * far as being one of four navigable sections. The Library (#37) and the
- * Feedback inbox (#38) are built and have test files of their own.
+ * Support View has a test file of its own (`test/support-view.test.ts`);
+ * what is asserted here is only the shape it leaves on this page — one
+ * button per Active row and none on a deleted one. The System section is a
+ * stub on purpose and is tested only as far as being one of four navigable
+ * sections. The Library (#37) and the Feedback inbox (#38) are built and
+ * have test files of their own.
  */
 
 const ADMIN = "operator@directcaretools.com";
@@ -409,8 +411,16 @@ describe("the Practices dashboard", () => {
     // Three absences the spec names, and the fourth that follows from them:
     // a list of fifty Practices is not where anybody's email address lives.
     expect(page.toLowerCase()).not.toContain("export");
-    expect(page).not.toContain("<form");
     expect(page).not.toContain('type="checkbox"');
     expect(page).not.toContain(OWNER);
+
+    // Every form on the page is Support View's single button (#40), one per
+    // Active row. No checkbox and no multi-select is what *no bulk edit*
+    // actually means here: the page has controls, and none of them act on
+    // more than one Practice.
+    const forms = page.match(/<form/g) ?? [];
+    const buttons = page.match(/View as owner/g) ?? [];
+    expect(forms.length).toBeGreaterThan(0);
+    expect(buttons).toHaveLength(forms.length);
   });
 });

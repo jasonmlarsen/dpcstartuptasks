@@ -1,4 +1,10 @@
-import { Form, Link, redirect } from "react-router";
+import {
+  data,
+  Form,
+  Link,
+  redirect,
+  type RouterContextProvider,
+} from "react-router";
 
 import { AppBar } from "~/components/app-bar";
 import { FEEDBACK_CHARACTER_CAP } from "~/database/schema";
@@ -9,6 +15,7 @@ import {
   type RefusedFeedback,
 } from "~/practice/feedback";
 import { requireCurrentPerson } from "~/practice/signed-in-practice";
+import { supportViewContext } from "~/root";
 import { getServices } from "~/services/services";
 import type { Route } from "./+types/feedback";
 
@@ -30,9 +37,16 @@ export function meta(_: Route.MetaArgs) {
  * because a thread is the support request the vocabulary was chosen to
  * avoid: the Admin has the address on the row and writes back by hand if it
  * is worth it. What the physician gets is a line saying it arrived.
+ *
+ * The one page in the product that a **Support View** cannot reach. The
+ * appbar hides its item for the duration, and this is the other half of the
+ * same promise: `sendFeedback` takes its author from the session, so an
+ * Admin who typed the address by hand would write a Feedback in a
+ * physician's name. Hiding a link is not *never*.
  */
 export async function loader({ context, request }: Route.LoaderArgs) {
   const services = getServices(context);
+  refuseInSupportView(context);
   const { practice } = await requireCurrentPerson(services, request);
 
   const parameters = new URL(request.url).searchParams;
@@ -64,6 +78,7 @@ export async function loader({ context, request }: Route.LoaderArgs) {
  */
 export async function action({ context, request }: Route.ActionArgs) {
   const services = getServices(context);
+  refuseInSupportView(context);
   const { user, practice } = await requireCurrentPerson(services, request);
 
   const submitted = await request.formData();
@@ -236,4 +251,12 @@ function Confirmation({ from }: { from: string }) {
       </Link>
     </>
   );
+}
+
+/**
+ * The same 404 the admin panel gives, and for the same reason: there is
+ * nothing here to explain to the one person who could have reached it.
+ */
+function refuseInSupportView(context: Readonly<RouterContextProvider>): void {
+  if (context.get(supportViewContext)) throw data(null, { status: 404 });
 }

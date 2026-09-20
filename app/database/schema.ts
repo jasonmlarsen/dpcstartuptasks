@@ -744,3 +744,79 @@ export const feedbackDigest = sqliteTable("feedback_digest", {
     .notNull()
     .default(sql`(unixepoch())`),
 });
+
+/**
+ * Why a Support View ended. Four values, never free text.
+ *
+ * Better Auth cannot tell them apart afterwards — a deleted session row is a
+ * deleted session row — so the reason is written at the moment it happens,
+ * and each one maps to exactly one sentence the Admin reads on the way out.
+ * `purged` has no writer yet: the Purge is #42, and the value is here so that
+ * the column it will write into already exists and already means something.
+ */
+export const SUPPORT_VIEW_END_REASONS = [
+  /** The Admin pressed Stop. The one exit that says nothing afterwards. */
+  "stopped",
+  /** The hour ran out, which is by far the most frequent of the four. */
+  "timed_out",
+  /** The Owner deleted the Practice while the Admin was inside it. */
+  "practice_deleted",
+  /** The Grace Period ran out mid-view (#42). */
+  "purged",
+] as const;
+
+export type SupportViewEndReason = (typeof SUPPORT_VIEW_END_REASONS)[number];
+
+/**
+ * One Support View: the Admin inside a Practice as its Owner, from the press
+ * to whatever ended it.
+ *
+ * This table is what makes the privacy policy's sentence checkable — *every
+ * time this happens it is recorded* — which decides the two things about it
+ * that look wrong at first glance.
+ *
+ * **No foreign keys.** Every other table in this file points at the rows it
+ * depends on and lets them cascade; this one must not. A Purge destroys the
+ * Practice and every User in it (ADR-0007), and a cascade here would destroy
+ * the record of the Admin having been inside it at the same moment — the one
+ * disclosure that has to outlive its subject. The ids are kept as plain
+ * columns and are allowed to dangle.
+ *
+ * **No reason for viewing.** #5 turned that down as ceremony for a team of
+ * one, and this does not reopen it: nobody types anything here, the app fills
+ * every column in.
+ */
+export const impersonationLog = sqliteTable(
+  "impersonation_log",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    /** The Admin who pressed *View as Owner*. */
+    adminUserId: text("admin_user_id").notNull(),
+    /** The Owner whose list they are typing into. Never a Member (ADR-0001). */
+    targetUserId: text("target_user_id").notNull(),
+    /** The Practice they entered, for the banner and for the row afterwards. */
+    practiceId: integer("practice_id").notNull(),
+    /**
+     * When the borrowed session would run out on its own.
+     *
+     * Stored rather than derived because it is what turns `timed_out` from a
+     * guess into a fact: on the way back in, the session row is gone either
+     * way, and this column is the only thing left that can say whether the
+     * hour had passed. Without it the rescue could only shrug.
+     */
+    expiresAt: integer("expires_at", { mode: "timestamp" }).notNull(),
+    startedAt: integer("started_at", { mode: "timestamp" })
+      .notNull()
+      .default(sql`(unixepoch())`),
+    /** Null while the view is live. Set once, by whatever ended it. */
+    endedAt: integer("ended_at", { mode: "timestamp" }),
+    endedReason: text("ended_reason", { enum: SUPPORT_VIEW_END_REASONS }),
+  },
+  (table) => [
+    // Two readers, two indexes: the Owner's side asks *is there a live view
+    // of this User* when their access is being taken away, and the Admin's
+    // side asks *what was my last one* on the way back in.
+    index("impersonation_log_target_idx").on(table.targetUserId, table.endedAt),
+    index("impersonation_log_admin_idx").on(table.adminUserId, table.startedAt),
+  ],
+);
