@@ -370,6 +370,70 @@ export const membership = sqliteTable(
   ],
 );
 
+/**
+ * How many people a Practice may hold, counting the Owner and every pending
+ * Invite.
+ *
+ * Three is the product's shape rather than a tuning knob: an Owner, and the
+ * two people a solo practice actually shares this list with — the spouse
+ * doing the paperwork and the practice manager. Pending Invites count, which
+ * is what makes acceptance unable to put a fourth person in a Practice
+ * without anything having to be locked at the moment someone says yes.
+ */
+export const PRACTICE_PEOPLE_CAP = 3;
+
+/**
+ * An Invite: an Owner's outstanding offer of a Membership to an email address.
+ *
+ * `token_digest` holds the SHA-256 of the invite token and never the token
+ * itself, for the same reason the `verification` table does: a stolen copy of
+ * the database is not a drawer full of working invitations.
+ *
+ * The address is stored in the clear, unlike `sign_in_link_request` and
+ * `pending_email_consent`. The difference is who put it there: those two are
+ * filled by anyone who can type into the sign-in form, while this row is one
+ * Owner naming a person they are inviting into their own Practice, and the
+ * Owner has to be shown it back on the People section to be able to revoke it.
+ *
+ * Pending is `accepted_at IS NULL AND revoked_at IS NULL AND expires_at` in
+ * the future — three columns rather than a state, because each of the first
+ * two is a different sentence the invite link has to be able to say, and a
+ * single `status` column would collapse them into one.
+ */
+export const invite = sqliteTable(
+  "invite",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    practiceId: integer("practice_id")
+      .notNull()
+      .references(() => practice.id, { onDelete: "cascade" }),
+    /** The address the Owner typed, lowercased and trimmed. */
+    email: text("email").notNull(),
+    /** SHA-256 of the token in the invite email. Unique, so a lookup is a hit or nothing. */
+    tokenDigest: text("token_digest").notNull().unique(),
+    /**
+     * The name the invitee typed on the acceptance screen, waiting for the
+     * User that their first sign-in will create — the same gap
+     * `pending_email_consent` crosses, for the same reason. Null until they
+     * fill it in, because the acceptance screen may never be reached.
+     */
+    inviteeName: text("invitee_name"),
+    expiresAt: integer("expires_at", { mode: "timestamp" }).notNull(),
+    /** Set when the invitee signed in and the Membership was created. */
+    acceptedAt: integer("accepted_at", { mode: "timestamp" }),
+    /** Set when the Owner took the offer back. */
+    revokedAt: integer("revoked_at", { mode: "timestamp" }),
+    createdAt: integer("created_at", { mode: "timestamp" })
+      .notNull()
+      .default(sql`(unixepoch())`),
+  },
+  (table) => [
+    index("invite_practice_idx").on(table.practiceId),
+    // Every sign-in asks whether the address arriving has an Invite waiting.
+    index("invite_email_idx").on(table.email),
+  ],
+);
+
 /** Where a Practice has got to on one Task. Stored as text, never as `N/A`. */
 export const TASK_STATUSES = [
   "not_started",

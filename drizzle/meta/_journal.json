@@ -50,6 +50,13 @@
       "when": 1789869644768,
       "tag": "0006_tailoring_wizard",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1789870195610,
+      "tag": "0007_people",
+      "breakpoints": true
     }
   ]
 }

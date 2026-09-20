@@ -164,10 +164,15 @@ export default function Phase({ loaderData }: Route.ComponentProps) {
           <h1 className="text-lg font-semibold text-gray-900">
             {practiceName ?? "Your practice"}
           </h1>
-          <ProgressLine
-            progress={map.listProgress}
-            wording="done overall"
-          />
+          <div className="flex items-baseline gap-4">
+            <ProgressLine
+              progress={map.listProgress}
+              wording="done overall"
+            />
+            <Link to="/settings" className="text-sm text-gray-600 underline">
+              People
+            </Link>
+          </div>
         </div>
       </header>
 

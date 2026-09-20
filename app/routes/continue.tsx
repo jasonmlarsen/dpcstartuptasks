@@ -1,7 +1,7 @@
 import { data, Form, Link, redirect } from "react-router";
 
 import { isSameOrigin } from "~/auth/origin";
-import { continueFromSignInLink } from "~/auth/server";
+import { continueFromSignInLink, setDisplayName } from "~/auth/server";
 import { registerPractice } from "~/practice/registration";
 import { getServices } from "~/services/services";
 import type { Route } from "./+types/continue";
@@ -57,7 +57,14 @@ export async function action({ context, request }: Route.ActionArgs) {
   // is where the Practice, the Owner Membership and ninety-eight Task Entries
   // come into being. Run on every successful sign-in, because what it reads is
   // whether a Membership exists, and for everyone after the first it does.
-  registerPractice(services.database, outcome.user);
+  const registered = registerPractice(services.database, outcome.user);
+
+  // A Member's name is set on the acceptance screen and lands here, on the
+  // sign-in that turns their Invite into a Membership. It goes through the
+  // auth module because `user.name` is Better Auth's own column.
+  if (registered.displayName) {
+    await setDisplayName(services, outcome.user.id, registered.displayName);
+  }
 
   // Better Auth set the session cookie on its own response headers; this is
   // where it is carried onto ours.

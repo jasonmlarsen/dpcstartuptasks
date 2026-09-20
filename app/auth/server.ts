@@ -172,6 +172,71 @@ export async function getSignedInUser(
   return { id, email, name };
 }
 
+/**
+ * End every session a User holds, right now.
+ *
+ * `revokeSession({ token })` is never used for this. Handed a token belonging
+ * to someone else it skips the delete and still returns `{ status: true }` — a
+ * silent no-op reporting success — because every public core endpoint is
+ * self-scoped. The correct call is `auth.$context` → `deleteUserSessions`,
+ * which is typed and exported but absent from the documented API pages, and
+ * that semi-public status is why the revocation test at seam 1 is mandatory
+ * (ADR-0004).
+ *
+ * "Immediately" honestly means "on the next request": auth resolves once at
+ * the top of a request, so an in-flight document completes with the authority
+ * it started with. The cost is one more page view, which is why an Owner
+ * removing a Member revokes before it deletes.
+ */
+export async function revokeAllSessions(
+  services: AppServices,
+  userId: string,
+): Promise<void> {
+  const auth = authFor(services);
+  const context = await auth.$context;
+  await context.internalAdapter.deleteUserSessions(userId);
+}
+
+/**
+ * Delete a User outright, sessions first.
+ *
+ * For a Member, Leaving *is* deleting: there is no account without a Practice,
+ * so the one control that removes them from the Practice removes them from the
+ * product. What they wrote stays behind, because a Note belongs to the
+ * Practice and not to whoever typed it.
+ */
+export async function deleteUserAccount(
+  services: AppServices,
+  userId: string,
+): Promise<void> {
+  const auth = authFor(services);
+  const context = await auth.$context;
+
+  // Revoked before the row goes, so that the failure mode of a half-finished
+  // delete is a person who cannot get in rather than one who still can.
+  await context.internalAdapter.deleteUserSessions(userId);
+  await context.internalAdapter.deleteUser(userId);
+}
+
+/**
+ * Write a User's Display Name, which is the one thing about a User the
+ * product itself asks for.
+ *
+ * It goes through this module rather than through an `UPDATE` in a domain
+ * file because `name` is Better Auth's own column on Better Auth's own table
+ * — unlike the two Email Consent columns, which are ours and sit there only
+ * because a User is who consented.
+ */
+export async function setDisplayName(
+  services: AppServices,
+  userId: string,
+  name: string,
+): Promise<void> {
+  const auth = authFor(services);
+  const context = await auth.$context;
+  await context.internalAdapter.updateUser(userId, { name });
+}
+
 type Auth = ReturnType<typeof createAuth>;
 
 /**

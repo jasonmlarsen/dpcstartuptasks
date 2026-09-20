@@ -1,6 +1,6 @@
 import { redirect } from "react-router";
 
-import { getSignedInUser } from "~/auth/server";
+import { getSignedInUser, type SignedInUser } from "~/auth/server";
 import type { AppServices } from "~/services/services";
 import { practiceFor, type CurrentPractice } from "./practice";
 import { tailoringOwed } from "./tailoring";
@@ -44,6 +44,27 @@ export async function requireCurrentPractice(
   if (!practice) throw redirect("/");
 
   return practice;
+}
+
+/**
+ * The same, for a screen that is about the people rather than the list.
+ *
+ * Settings is the one place that has to name who is reading — it shows their
+ * address, writes their Display Name, and offers the Member who is reading
+ * it the Leave button and nobody else — so it gets the User alongside the
+ * Practice rather than looking the session up a second time.
+ */
+export async function requireCurrentPerson(
+  services: AppServices,
+  request: Request,
+): Promise<{ user: SignedInUser; practice: CurrentPractice }> {
+  const user = await getSignedInUser(services, request);
+  if (!user) throw redirect("/sign-in");
+
+  const practice = practiceFor(services.database, user.id);
+  if (!practice) throw redirect("/");
+
+  return { user, practice };
 }
 
 /**

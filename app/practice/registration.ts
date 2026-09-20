@@ -4,6 +4,7 @@ import type { SignedInUser } from "~/auth/server";
 import { claimEmailConsent } from "~/consent/email-consent";
 import type { AppDatabase, AppWriter } from "~/database/database";
 import { globalTask, membership, practice, taskEntry } from "~/database/schema";
+import { acceptInviteOnSignIn } from "./invite";
 
 /**
  * Registration: the first time an address signs in, it becomes a Practice.
@@ -18,24 +19,50 @@ import { globalTask, membership, practice, taskEntry } from "~/database/schema";
  * Membership* that means newcomer, and asking that question every time is what
  * makes signing in again cost nothing: a physician who has a Practice keeps
  * the one they have.
+ *
+ * It is also where an Invite is taken up, because a Sign-in Link delivered to
+ * the invited address is the only thing in the product that proves who is
+ * holding it — the invite link itself carries no authority at all. So the
+ * question this asks is not *are you new?* but *where do you belong?*, and
+ * the three answers are: the Practice that invited you, the one you already
+ * have, or a new one.
  */
+export interface Registration {
+  /**
+   * A name an Invite carried, for the caller to write onto the User.
+   *
+   * Handed back rather than written here because `user.name` is Better Auth's
+   * own column and only `app/auth/server.ts` writes those (ADR-0004) — and
+   * because that write is async and this is one synchronous transaction.
+   */
+  displayName: string | null;
+}
+
 export function registerPractice(
   database: AppDatabase,
   signedInUser: SignedInUser,
-): void {
-  database.transaction((tx) => {
+): Registration {
+  return database.transaction((tx) => {
     const existing = tx
-      .select({ id: membership.id })
+      .select({ practiceId: membership.practiceId })
       .from(membership)
       .where(eq(membership.userId, signedInUser.id))
       .get();
 
-    if (!existing) createPractice(tx, signedInUser.id);
+    // Before the newcomer question, not after: a physician who signed up
+    // alone and then accepted a colleague's invitation has their own empty
+    // Practice abandoned here, which is the only thing that keeps one
+    // Practice per User from stranding the two of them apart.
+    const invited = acceptInviteOnSignIn(tx, signedInUser, existing ?? null);
+
+    if (!invited.joined && !existing) createPractice(tx, signedInUser.id);
 
     // Claimed for a returning physician too. Consent is append-only, so this
     // can only ever add one that was never given — it cannot rewrite or clear
     // an act already recorded.
     claimEmailConsent(tx, signedInUser.id, signedInUser.email);
+
+    return { displayName: invited.joined ? invited.displayName : null };
   });
 }
 

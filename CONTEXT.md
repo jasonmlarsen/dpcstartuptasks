@@ -26,6 +26,10 @@ _Avoid_: Superuser, staff
 The Admin looking at a Practice exactly as its Owner sees it, in order to help them. Shows everything the Owner can see, including Notes, and can act as they would. Always announced by a banner for as long as it lasts. Only ever aimed at an Owner, never at a Member. The Send feedback item is hidden for its duration, so the Admin can never file a Feedback in the Owner's name. It ends when the Admin stops it, when its hour runs out, or the instant the Owner's own access ends — deleting a Practice takes the Admin's view of it away too, and a Practice in its Grace Period cannot be entered at all.
 _Avoid_: Impersonation (what the library calls it, not what it is for), god mode, sudo, shadowing
 
+**Display Name**:
+The one free-text name a User has, with their email address as the fallback everywhere it is missing. An Owner is asked for theirs at the moment they first invite someone, because an invitation has to come from a person; a Member types theirs on the acceptance screen. Never synced to Kit, and the email address beside it is never editable.
+_Avoid_: Full name, profile, username
+
 **Membership**:
 The link between a User and the one Practice they belong to, carrying their role of Owner or Member. A User belongs to exactly one Practice.
 _Avoid_: Seat, role assignment, affiliation
