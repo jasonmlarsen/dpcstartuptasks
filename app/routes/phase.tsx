@@ -1,5 +1,6 @@
 import { data, Form, Link, redirect } from "react-router";
 
+import { AppBar } from "~/components/app-bar";
 import { TASK_STATUSES, type TaskStatus } from "~/database/schema";
 import { addCustomTask, deleteCustomTask } from "~/practice/custom-task";
 import {
@@ -159,22 +160,12 @@ export default function Phase({ loaderData }: Route.ComponentProps) {
 
   return (
     <div className="min-h-dvh bg-gray-50">
-      <header className="border-b border-gray-200 bg-white">
-        <div className="mx-auto flex max-w-3xl items-baseline justify-between px-6 py-4">
-          <h1 className="text-lg font-semibold text-gray-900">
-            {practiceName ?? "Your practice"}
-          </h1>
-          <div className="flex items-baseline gap-4">
-            <ProgressLine
-              progress={map.listProgress}
-              wording="done overall"
-            />
-            <Link to="/settings" className="text-sm text-gray-600 underline">
-              Settings
-            </Link>
-          </div>
-        </div>
-      </header>
+      <AppBar title={practiceName ?? "Your practice"}>
+        <ProgressLine progress={map.listProgress} wording="done overall" />
+        <Link to="/settings" className="text-sm text-gray-600 underline">
+          Settings
+        </Link>
+      </AppBar>
 
       <PhaseRail rail={map.rail} />
 

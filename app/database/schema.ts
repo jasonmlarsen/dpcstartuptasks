@@ -574,3 +574,103 @@ export const pendingEmailConsent = sqliteTable(
     index("pending_email_consent_digest_idx").on(table.emailDigest),
   ],
 );
+
+/**
+ * How long one Feedback may be, and how many a User may send in an hour.
+ *
+ * The one free-text box in the product, so it is the one place with a
+ * ceiling — and unlike the auth library's limiter (ADR-0004), this one
+ * actually fires, because every Feedback goes through an action we wrote.
+ * Neither number is a tuning knob a physician will ever meet: 5,000
+ * characters is several times the longest complaint anyone types about a
+ * paragraph of guidance, and ten in an hour is more than a person reporting
+ * real problems reaches.
+ */
+export const FEEDBACK_CHARACTER_CAP = 5000;
+export const FEEDBACK_PER_HOUR = 10;
+
+/**
+ * A Feedback: one thing a physician told the Admin was wrong.
+ *
+ * A message, not a case. There is **no `kind` column**, here or anywhere: a
+ * dropdown is friction at the moment of typing, and an Admin-applied tag
+ * would be a taxonomy for an audience of one. What sorts these rows is the
+ * page they came from and the Task they are about, and grouping by Task is
+ * the query that matters.
+ *
+ * Two states and nothing around them: New while `done_at` is null, then
+ * Done, optionally with the one line recording what changed or why nothing
+ * did. A nullable timestamp rather than a status column, for the reason
+ * `retired_at` and `deleted_at` are: the state *is* the fact of the moment,
+ * and there is no third value for a column to hold. The Admin's side of
+ * this — the queue, the Done press, the digest — is a later ticket; a row
+ * is created New and nothing here writes the other state yet.
+ *
+ * Both foreign keys cascade, which is how Purge takes Feedback (ADR-0007).
+ * Sever-and-keep was rejected: free text names its own author, so a row
+ * stripped of its FKs would be de-identified only in the schema.
+ */
+export const feedback = sqliteTable(
+  "feedback",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    practiceId: integer("practice_id")
+      .notNull()
+      .references(() => practice.id, { onDelete: "cascade" }),
+    /**
+     * Who typed it — the address the Admin writes back to by hand, or not at
+     * all.
+     *
+     * Null once that person's account is gone: a Member who Leaves, or one
+     * the Owner removes, is deleted immediately, and neither act may take a
+     * Feedback with it. **Only a Purge destroys a Feedback**, and a Purge
+     * reaches this row through `practice_id` rather than through here.
+     *
+     * This is not the sever-and-keep ADR-0007 rejected. That proposal kept
+     * rows after their Practice was destroyed and called them anonymous;
+     * this row still belongs to a live Practice, is still readable as that
+     * Practice's, and is still destroyed whole when that Practice is purged.
+     * What is lost is only the reply address, and only because the person
+     * it belonged to asked for their account to be gone.
+     */
+    authorUserId: text("author_user_id").references(() => user.id, {
+      onDelete: "set null",
+    }),
+    text: text("text").notNull(),
+    /**
+     * Where they were, as a path a person can read and paste into a browser
+     * — `/tasks/foundation-planning?task=obtain-ein`, never a route name.
+     * The Admin reading this has to be able to go and look.
+     */
+    pagePath: text("page_path").notNull(),
+    /**
+     * The Global Task they were looking at, when they were looking at one.
+     * Null covers three cases that need no telling apart: no Task open, a
+     * Custom Task, and a ref that named nothing.
+     */
+    globalTaskId: integer("global_task_id").references(() => globalTask.id),
+    /**
+     * The Task's title as it read at the moment the Feedback was sent.
+     *
+     * A snapshot and not a join, because the two Tasks this has to name
+     * cannot both be reached by one: a Custom Task is hard-deleted and
+     * leaves nothing to point at, and a Global Task's title is the Admin's
+     * to edit — often as the very fix this Feedback asked for. Either way
+     * the row still says what the physician was reading.
+     */
+    taskTitle: text("task_title"),
+    /** Null is New. Set is Done, which is the Admin's act and a later ticket. */
+    doneAt: integer("done_at", { mode: "timestamp" }),
+    /** The one line on Done: what changed, or why nothing did. */
+    doneNote: text("done_note"),
+    createdAt: integer("created_at", { mode: "timestamp" })
+      .notNull()
+      .default(sql`(unixepoch())`),
+  },
+  (table) => [
+    // The queue reads New first and newest first; the hourly ceiling counts
+    // one author's last hour. Two indexes, one per reader.
+    index("feedback_done_idx").on(table.doneAt, table.createdAt),
+    index("feedback_author_idx").on(table.authorUserId, table.createdAt),
+  ],
+);

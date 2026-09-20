@@ -31,6 +31,11 @@ export default [
   // the three acts that change it.
   route("settings", "routes/settings.tsx"),
 
+  // The one free-text box in the product, reachable from the appbar on
+  // every page behind the door. A page rather than a dialog, because a
+  // dialog is client JS; the page and the Task ride in on the address.
+  route("feedback", "routes/feedback.tsx"),
+
   route("terms", "routes/terms.tsx"),
   route("privacy", "routes/privacy.tsx"),
 ] satisfies RouteConfig;

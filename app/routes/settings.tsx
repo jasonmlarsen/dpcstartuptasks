@@ -1,6 +1,7 @@
 import { data, Form, Link, redirect } from "react-router";
 
 import { setDisplayName, signOut } from "~/auth/server";
+import { AppBar } from "~/components/app-bar";
 import {
   emailConsentGrantedAt,
   EMAIL_CONSENT_WORDING,
@@ -217,16 +218,11 @@ export default function Settings({
 
   return (
     <div className="min-h-dvh bg-gray-50">
-      <header className="border-b border-gray-200 bg-white">
-        <div className="mx-auto flex max-w-2xl items-baseline justify-between px-6 py-4">
-          <h1 className="text-lg font-semibold text-gray-900">
-            {practiceName ?? "Your practice"}
-          </h1>
-          <Link to="/tasks" className="text-sm text-gray-600 underline">
-            Back to your list
-          </Link>
-        </div>
-      </header>
+      <AppBar title={practiceName ?? "Your practice"} width="max-w-2xl">
+        <Link to="/tasks" className="text-sm text-gray-600 underline">
+          Back to your list
+        </Link>
+      </AppBar>
 
       <main className="mx-auto max-w-2xl space-y-12 px-6 py-10">
         <PracticeSection
