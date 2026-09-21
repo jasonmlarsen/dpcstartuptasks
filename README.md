@@ -24,6 +24,13 @@ npm test
 npm run build
 ```
 
+The dev server's port is pinned to 3000 in `vite.config.ts` rather than left
+at Vite's own 5173, and it is not a preference: a Sign-in Link is addressed to
+`APP_URL`, which defaults to `http://localhost:3000`, and the Continue Screen's
+`POST` is refused unless the browser's `Origin` matches it. On any other port
+the links point at a door that is not open, and opening one by hand meets *That
+did not come from here*.
+
 `DATABASE_PATH` selects the SQLite file, defaulting to
 `./data/launch-tasks.sqlite`. Migrations run when the database is opened, so
 there is no separate setup step; `npm run db:generate` writes a new one after a

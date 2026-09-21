@@ -4,6 +4,18 @@ import { defineConfig } from "vitest/config";
 
 export default defineConfig({
   plugins: [tailwindcss(), reactRouter()],
+  server: {
+    // Pinned, and not left at Vite's 5173. `APP_URL` defaults to
+    // `http://localhost:3000` and `react-router-serve` answers there in
+    // production, so the port is not a preference — a Sign-in Link is minted
+    // against `APP_URL` and the Continue `POST` is refused unless the browser's
+    // `Origin` matches it. A dev server on any other port mails links to a door
+    // that is not open, and opening them by hand meets *That did not come from
+    // here*. `strictPort` so a port already in use fails loudly instead of
+    // drifting to 3001 and reintroducing the same mismatch.
+    port: 3000,
+    strictPort: true,
+  },
   resolve: {
     tsconfigPaths: true,
   },
