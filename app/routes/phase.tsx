@@ -1,3 +1,4 @@
+import { Check } from "lucide-react";
 import { data, Form, Link, redirect } from "react-router";
 
 import { AppBar } from "~/components/app-bar";
@@ -168,34 +169,41 @@ export default function Phase({ loaderData }: Route.ComponentProps) {
 
   return (
     <div className="min-h-dvh bg-gray-50">
-      <AppBar title={practiceName ?? "Your practice"}>
+      <AppBar
+        title={practiceName ?? "Your practice"}
+        width="max-w-3xl min-[800px]:max-w-5xl"
+      >
         <ProgressLine progress={map.listProgress} wording="done overall" />
         <Link to="/settings" className="text-sm text-gray-600 underline">
           Settings
         </Link>
       </AppBar>
 
-      <PhaseRail rail={map.rail} />
+      {/* The rail beside the Phase from 800px up and above it below, which
+          is one flex direction rather than two components. */}
+      <div className="mx-auto flex max-w-3xl flex-col gap-8 px-6 min-[800px]:max-w-5xl min-[800px]:flex-row min-[800px]:items-start">
+        <PhaseRail rail={map.rail} />
 
-      <main className="mx-auto max-w-3xl px-6 pb-24">
-        <h2 className="pt-6 text-2xl font-bold text-gray-900">
-          {map.phaseName}
-        </h2>
-        <ProgressLine
-          progress={map.phaseProgress}
-          wording="done in this phase"
-        />
+        <main className="min-w-0 flex-1 pb-24">
+          <h2 className="pt-6 text-2xl font-bold text-gray-900">
+            {map.phaseName}
+          </h2>
+          <ProgressLine
+            progress={map.phaseProgress}
+            wording="done in this phase"
+          />
 
-        <ul className="mt-4 space-y-3">
-          {map.cards.map((card) => (
-            <li key={card.ref}>
-              <TaskCard card={card} phaseSlug={map.phaseSlug} />
-            </li>
-          ))}
-        </ul>
+          <ul className="mt-4 space-y-3">
+            {map.cards.map((card) => (
+              <li key={card.ref}>
+                <TaskCard card={card} phaseSlug={map.phaseSlug} />
+              </li>
+            ))}
+          </ul>
 
-        <AddTaskForm phaseSlug={map.phaseSlug} />
-      </main>
+          <AddTaskForm phaseSlug={map.phaseSlug} />
+        </main>
+      </div>
 
       {map.openTask && (
         <TaskDrawer
@@ -251,36 +259,111 @@ function ProgressLine({
 }
 
 /**
- * The rail: eleven Phases, one of them in view.
+ * The rail: eleven Phases as stations, one of them in view.
  *
  * Every Phase is one press away and only one Phase's Tasks are on the page,
  * which is the whole argument of the screen — 3 to 13 Tasks is a morning's
- * work, and 98 is a wall.
+ * work, and 98 is a wall. Eleven is the number a physician can hold, so the
+ * rail is what makes 98 finite; a rail carrying no progress would be a list
+ * of links, and *how much of this is behind me* is the question it exists to
+ * answer.
+ *
+ * One component and one media query, as the drawer is: from 800px up it is a
+ * sticky column down the left with the Phase beside it, and below that the
+ * horizontal scroller it has always been. The two arrangements differ only in
+ * where the flex runs, what the station's grid does with its two cells, and
+ * whether the connector is drawn — not in what is rendered, so there is one
+ * rail to keep true rather than two.
+ *
+ * No client JS: plain links, as before.
  */
 function PhaseRail({ rail }: { rail: RailPhase[] }) {
   return (
     <nav
       aria-label="Phases"
-      className="border-b border-gray-200 bg-white overflow-x-auto"
+      className="-mx-6 shrink-0 overflow-x-auto border-b border-gray-200 bg-white px-6 pt-4 min-[800px]:sticky min-[800px]:top-6 min-[800px]:mx-0 min-[800px]:w-[17rem] min-[800px]:overflow-x-visible min-[800px]:border-0 min-[800px]:bg-transparent min-[800px]:px-0 min-[800px]:pt-6"
     >
-      <ol className="mx-auto flex max-w-3xl gap-2 px-6 py-3">
-        {rail.map((phase) => (
+      <ol className="flex gap-2 pb-2 min-[800px]:block min-[800px]:gap-0 min-[800px]:pb-0">
+        {rail.map((phase, index) => (
           <li key={phase.slug} className="shrink-0">
-            <Link
-              to={`/tasks/${phase.slug}`}
-              aria-current={phase.inView ? "page" : undefined}
-              className={
-                phase.inView
-                  ? "block rounded-full bg-primary px-4 py-1.5 text-sm font-medium text-white"
-                  : "block rounded-full px-4 py-1.5 text-sm text-gray-600 hover:bg-gray-100"
-              }
-            >
-              {phase.name}
-            </Link>
+            <Station phase={phase} last={index === rail.length - 1} />
           </li>
         ))}
       </ol>
     </nav>
+  );
+}
+
+/**
+ * One Phase on the rail: a numbered mark, its name, and its own `n of m`.
+ *
+ * The mark turns into a check once the Phase is complete, and the connector
+ * running down to the next station turns green behind it — which is the
+ * *behind you* the rail is for. Complete and in view are two separate marks
+ * rather than one winning over the other: a physician standing in a Phase
+ * they have finished should see both facts, and `aria-current` says the
+ * second one to a reader who cannot see the ring.
+ */
+function Station({ phase, last }: { phase: RailPhase; last: boolean }) {
+  return (
+    <Link
+      to={`/tasks/${phase.slug}`}
+      aria-current={phase.inView ? "page" : undefined}
+      className="relative grid min-w-[8.5rem] grid-cols-1 items-start gap-1 rounded-md px-2 py-2 hover:bg-gray-100 min-[800px]:min-w-0 min-[800px]:grid-cols-[1.75rem_1fr] min-[800px]:gap-3"
+    >
+      {/* The line between this station and the next, green once this Phase
+          is behind the physician. Never drawn in the horizontal
+          arrangement, where the stations do not sit above one another and a
+          line between them would be pointing at nothing. */}
+      {!last && (
+        <span
+          aria-hidden="true"
+          className={`absolute top-9 -bottom-2 left-[1.3125rem] hidden w-0.5 min-[800px]:block ${
+            phase.complete ? "bg-success" : "bg-gray-200"
+          }`}
+        />
+      )}
+
+      {/* Complete decides the mark's colour and in-view adds the halo, so
+          the two never fight over `border-color`: a finished Phase the
+          physician is standing in is a green check inside a blue ring. */}
+      <span
+        className={`z-1 grid size-7 place-items-center rounded-full border-2 text-xs font-bold ${
+          phase.complete
+            ? "border-success bg-success text-white"
+            : phase.inView
+              ? "border-primary bg-white text-primary"
+              : "border-gray-300 bg-white text-gray-400"
+        } ${phase.inView ? "ring-4 ring-primary/20" : ""}`}
+      >
+        {phase.complete ? (
+          <>
+            <Check aria-hidden="true" className="size-4" strokeWidth={3} />
+            {/* A check glyph says nothing to a screen reader, and this is
+                the one state the station exists to announce. */}
+            <span className="sr-only">Complete</span>
+          </>
+        ) : (
+          phase.number
+        )}
+      </span>
+
+      <span
+        className={`text-sm ${
+          phase.inView ? "font-bold text-gray-900" : "text-gray-600"
+        }`}
+      >
+        {phase.name}
+        {/* `0 of 0` under a check reads as a bug rather than as a Phase this
+            Practice will never need. The check is the whole of what there is
+            to say about a Phase that is asking nothing. */}
+        {phase.progress.total > 0 && (
+          <span className="block text-xs font-normal text-gray-400">
+            {phase.progress.done} of {phase.progress.total}
+          </span>
+        )}
+      </span>
+    </Link>
   );
 }
 

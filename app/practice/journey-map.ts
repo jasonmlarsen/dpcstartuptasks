@@ -44,11 +44,36 @@ import { customRef } from "./task-ref";
  * so no value a request carries can point one physician at another's list.
  */
 
-/** One Phase on the rail. Ten of the eleven are reachable, not on screen. */
+/**
+ * One Phase on the rail, as a station. Ten of the eleven are reachable, not
+ * on screen.
+ *
+ * It carries its own progress because that is the one thing the rail exists
+ * to say: eleven Phases is a number a physician can hold, and a terrain with
+ * no *behind you* on it is a list of links rather than a map.
+ */
 export interface RailPhase {
+  /**
+   * Its place in the list, one-based. Derived from position and never part
+   * of the name (CONTEXT.md), which is why it is a number here rather than
+   * something the screen reads off the front of a string.
+   */
+  number: number;
   name: string;
   slug: string;
   inView: boolean;
+  /** Counted exactly as the progress lines count — see `Progress`. */
+  progress: Progress;
+  /**
+   * Every Task this Phase still asks for is done, so the station shows a
+   * check in place of its number.
+   *
+   * True as well for a Phase with nothing countable left in it at all, which
+   * is a Practice that set the whole Phase aside. There is no work there and
+   * there never will be, and a permanently unfinished station would be the
+   * list accusing a Practice of a decision it made on purpose (ADR-0002).
+   */
+  complete: boolean;
 }
 
 /** A collapsed Task card: its title, and two lines of its Body. */
@@ -236,12 +261,20 @@ export function journeyMap(
 
   const cards = [...globals, ...customs].sort(byStatusThenLibraryOrder);
 
+  const progress = progressTally(database, practice);
+
   return {
-    rail: phases.map((row) => ({
-      name: row.name,
-      slug: slugify(row.name),
-      inView: row.id === inView.id,
-    })),
+    rail: phases.map((row, index) => {
+      const tally = progress.byPhase.get(row.id) ?? nothingAsked();
+      return {
+        number: index + 1,
+        name: row.name,
+        slug: slugify(row.name),
+        inView: row.id === inView.id,
+        progress: tally,
+        complete: tally.done === tally.total,
+      };
+    }),
     phaseName: inView.name,
     phaseSlug: slugify(inView.name),
     cards: cards.map((task) => ({
@@ -262,8 +295,11 @@ export function journeyMap(
       open: task.ref === view.taskRef,
       landed: task.ref === view.movedRef,
     })),
-    phaseProgress: progressOver(cards),
-    listProgress: listProgress(database, practice),
+    // The Phase in view reads its own line off the same tally the rail
+    // does, rather than counting the cards a second time: two counts of the
+    // one number is two places for the rule about Not Applicable to drift.
+    phaseProgress: progress.byPhase.get(inView.id) ?? nothingAsked(),
+    listProgress: progress.whole,
     openTask: view.taskRef
       ? openTask(database, practice, cards, view.taskRef, inView.name)
       : null,
@@ -479,31 +515,48 @@ function sortBucket(task: MergedTask): number {
   return STATUS_ORDER[isRetired(task) ? "not_applicable" : task.status];
 }
 
-/** Done out of what is still being asked for, over any set of Tasks. */
-function progressOver(tasks: MergedTask[]): Progress {
-  const counted = tasks.filter((task) => !setAside(task));
+/**
+ * A Phase that is asking nothing of this Practice, which is complete by the
+ * same arithmetic as one that is finished — see `RailPhase.complete`.
+ *
+ * A new object each time rather than one shared constant: the tally below is
+ * built by mutating in place, and a sentinel handed out eleven times is one
+ * `+= 1` away from every empty Phase counting the same Tasks.
+ */
+function nothingAsked(): Progress {
+  return { done: 0, total: 0 };
+}
 
-  return {
-    done: counted.filter((task) => task.status === "done").length,
-    total: counted.length,
-  };
+/** The whole list's tally, and the same tally cut by Phase. */
+interface ProgressTally {
+  whole: Progress;
+  /** Keyed by Phase id. A Phase asking nothing is simply absent. */
+  byPhase: Map<number, Progress>;
 }
 
 /**
- * The same count over the whole list rather than the Phase in view.
+ * The count over the whole list, cut eleven ways as well as summed.
  *
  * Read here rather than summed from eleven journey maps: the physician asked
  * one question — how far am I? — and it is one query over the Task Entries
  * and the Practice's own Tasks. A Retired Task whose Entry the Admin deleted
  * is not in it at all, and one the Practice had touched is in it and
  * uncounted, which are the same answer arrived at two ways.
+ *
+ * The per-Phase cut is the rail, and it comes out of these same rows rather
+ * than eleven more queries. It is still the second merge ADR-0003 names, not
+ * a third: the same two tables, read once, tallied twice.
  */
-function listProgress(
+function progressTally(
   database: AppDatabase,
   practice: CurrentPractice,
-): Progress {
+): ProgressTally {
   const globals = database
-    .select({ status: taskEntry.status, retiredAt: globalTask.retiredAt })
+    .select({
+      phaseId: globalTask.phaseId,
+      status: taskEntry.status,
+      retiredAt: globalTask.retiredAt,
+    })
     .from(taskEntry)
     .innerJoin(globalTask, eq(taskEntry.globalTaskId, globalTask.id))
     .where(
@@ -513,24 +566,37 @@ function listProgress(
       ),
     )
     .all()
-    .map((row) => ({ status: row.status, retired: row.retiredAt !== null }));
+    .map((row) => ({
+      phaseId: row.phaseId,
+      status: row.status,
+      retired: row.retiredAt !== null,
+    }));
 
   const customs = database
-    .select({ status: customTask.status })
+    .select({ phaseId: customTask.phaseId, status: customTask.status })
     .from(customTask)
     .where(eq(customTask.practiceId, practice.id))
     .all()
     // A Custom Task belongs to the Practice that wrote it, and the Admin has
     // no reach into it: there is nobody who could Retire one.
-    .map((row) => ({ status: row.status, retired: false }));
+    .map((row) => ({ phaseId: row.phaseId, status: row.status, retired: false }));
 
-  const counted = [...globals, ...customs].filter(
-    (row) => !offTheList(row),
-  );
+  const counted = [...globals, ...customs].filter((row) => !offTheList(row));
+
+  const byPhase = new Map<number, Progress>();
+  for (const row of counted) {
+    const tally = byPhase.get(row.phaseId) ?? nothingAsked();
+    tally.total += 1;
+    if (row.status === "done") tally.done += 1;
+    byPhase.set(row.phaseId, tally);
+  }
 
   return {
-    done: counted.filter((row) => row.status === "done").length,
-    total: counted.length,
+    whole: {
+      done: counted.filter((row) => row.status === "done").length,
+      total: counted.length,
+    },
+    byPhase,
   };
 }
 

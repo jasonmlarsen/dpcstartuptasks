@@ -34,6 +34,11 @@ const OTHER_PHYSICIAN = "dr.okafor@example.com";
 const FOUNDATION = "/tasks/foundation-planning";
 const CREDENTIALING = "/tasks/credentialing-compliance";
 
+/** The same three Phases by the name a physician reads on the rail. */
+const FOUNDATION_NAME = "Foundation & Planning";
+const CREDENTIALING_NAME = "Credentialing & Compliance";
+const TECHNOLOGY_NAME = "Technology";
+
 /** Real Tasks from the real Task Library, which every test app is seeded with. */
 const EIN = "obtain-ein-employer-identification-number";
 const REGISTER_NAME = "register-legal-business-name";
@@ -53,6 +58,23 @@ async function readable(response: Response): Promise<string> {
 
 async function page(app: TestApp, path: string): Promise<string> {
   return readable(await app.fetch(path));
+}
+
+/** The rail alone, so a count in a station is not read off a card. */
+function railOf(html: string): string {
+  const start = html.indexOf('aria-label="Phases"');
+  const end = html.indexOf("</nav>", start);
+  if (start < 0 || end < 0) throw new Error("There is no rail on this page");
+  return html.slice(start, end);
+}
+
+/** One Phase's station, found by the name a physician reads on it. */
+function stationFor(html: string, phaseName: string): string {
+  const station = railOf(html)
+    .split("<li")
+    .find((chunk) => chunk.includes(phaseName.replace("&", "&amp;")));
+  if (!station) throw new Error(`No station on the rail for ${phaseName}`);
+  return station;
 }
 
 function practiceIdOf(app: TestApp, email: string): number {
@@ -102,6 +124,44 @@ function setStatus(
       ),
     )
     .run();
+}
+
+/** The Admin Retires a Task. The admin panel is another ticket; the row is not. */
+function retire(app: TestApp, slug: string) {
+  app.database
+    .update(globalTask)
+    .set({ retiredAt: new Date() })
+    .where(eq(globalTask.slug, slug))
+    .run();
+}
+
+/** Every Task in a Phase done, which is what makes a station a check. */
+function finishPhase(app: TestApp, email: string, phaseName: string) {
+  const phaseRow = app.database
+    .select({ id: phase.id })
+    .from(phase)
+    .where(eq(phase.name, phaseName))
+    .get();
+  if (!phaseRow) throw new Error(`No Phase named ${phaseName}`);
+
+  const tasks = app.database
+    .select({ id: globalTask.id })
+    .from(globalTask)
+    .where(eq(globalTask.phaseId, phaseRow.id))
+    .all();
+
+  for (const task of tasks) {
+    app.database
+      .update(taskEntry)
+      .set({ status: "done" })
+      .where(
+        and(
+          eq(taskEntry.practiceId, practiceIdOf(app, email)),
+          eq(taskEntry.globalTaskId, task.id),
+        ),
+      )
+      .run();
+  }
 }
 
 describe("landing on the journey map", () => {
@@ -158,6 +218,87 @@ describe("landing on the journey map", () => {
     const response = await app.fetch("/tasks/phase-twelve-post-launch");
 
     expect(response.status).toBe(404);
+  });
+});
+
+/**
+ * The rail, on the page a physician is looking at.
+ *
+ * Sliced out of the rendered Phase rather than read off a view type, and
+ * station by station rather than as one blob: `0 of 12` is a sentence eleven
+ * Phases could each produce, so a count asserted against the whole page says
+ * only that *some* Phase has it.
+ */
+describe("the Phase rail", () => {
+  it("gives every Phase its own n of m", async () => {
+    const app = newApp();
+    await signInAs(app, PHYSICIAN);
+    setStatus(app, PHYSICIAN, EIN, "done");
+
+    const foundation = await page(app, FOUNDATION);
+
+    // The eight and the twelve are the Library's own, and they are written
+    // out rather than counted here: a test that re-derives the expected
+    // number from the rows is asserting the page against itself.
+    expect(stationFor(foundation, FOUNDATION_NAME)).toContain("1 of 8");
+    // The Phase the physician is not looking at still carries its own,
+    // which is the whole point of the rail.
+    expect(stationFor(foundation, TECHNOLOGY_NAME)).toContain("0 of 12");
+  });
+
+  it("counts a Not Applicable Task neither way, as the progress lines do", async () => {
+    const app = newApp();
+    await signInAs(app, PHYSICIAN);
+    setStatus(app, PHYSICIAN, EIN, "done");
+    setStatus(app, PHYSICIAN, REGISTER_NAME, "not_applicable");
+
+    const foundation = await page(app, FOUNDATION);
+
+    expect(stationFor(foundation, FOUNDATION_NAME)).toContain("1 of 7");
+  });
+
+  it("counts a `No longer required` Task neither way either", async () => {
+    const app = newApp();
+    await signInAs(app, PHYSICIAN);
+    setStatus(app, PHYSICIAN, EIN, "done");
+    // Touched first, so the Task stays on this Practice's list when the
+    // Admin withdraws it — which is the only way a rail could count it.
+    setStatus(app, PHYSICIAN, REGISTER_NAME, "in_progress");
+    retire(app, REGISTER_NAME);
+
+    const foundation = await page(app, FOUNDATION);
+
+    expect(stationFor(foundation, FOUNDATION_NAME)).toContain("1 of 7");
+  });
+
+  it("marks a Phase whose countable Tasks are all done as complete", async () => {
+    const app = newApp();
+    await signInAs(app, PHYSICIAN);
+    finishPhase(app, PHYSICIAN, FOUNDATION_NAME);
+    // One Task honestly set aside, which is what makes the Phase reachable
+    // at all for a Practice that will never do it.
+    setStatus(app, PHYSICIAN, REGISTER_NAME, "not_applicable");
+
+    const foundation = await page(app, FOUNDATION);
+
+    const station = stationFor(foundation, FOUNDATION_NAME);
+    expect(station).toContain("Complete");
+    expect(station).toContain("7 of 7");
+    expect(stationFor(foundation, TECHNOLOGY_NAME)).not.toContain("Complete");
+  });
+
+  it("marks the Phase in view, and keeps every other one a press away", async () => {
+    const app = newApp();
+    await signInAs(app, PHYSICIAN);
+
+    const foundation = await page(app, FOUNDATION);
+
+    expect(stationFor(foundation, FOUNDATION_NAME)).toContain(
+      'aria-current="page"',
+    );
+    const elsewhere = stationFor(foundation, CREDENTIALING_NAME);
+    expect(elsewhere).not.toContain("aria-current");
+    expect(elsewhere).toContain(`href="${CREDENTIALING}"`);
   });
 });
 
