@@ -131,6 +131,21 @@ function isAscending(positions: number[]): boolean {
   );
 }
 
+/**
+ * One card's whole element, from its opening tag to its close.
+ *
+ * The colour of the left edge is a class the server put on the card — the
+ * Status change is a form post and there is no client JS on this path — so
+ * the rendered Phase is where it is read, the same way the landing flash is.
+ */
+function cardFor(rendered: string, phasePath: string, taskRef: string): string {
+  const at = rendered.indexOf(`href="${phasePath}?task=${taskRef}"`);
+  if (at === -1) throw new Error(`No card for ${taskRef}`);
+  const opens = rendered.lastIndexOf("<a", at);
+  const closes = rendered.indexOf("</a>", at);
+  return rendered.slice(opens, closes + "</a>".length);
+}
+
 describe("setting a Status", () => {
   it("writes the Status and puts the physician back on the Phase", async () => {
     const app = newApp();
@@ -307,6 +322,111 @@ describe("Not Applicable", () => {
 
     expect(open).toContain('value="not_started"');
     expect(statusOf(app, PHYSICIAN, REGISTER_NAME)).toBe("not_started");
+  });
+});
+
+
+/**
+ * Colour on the card, and nothing else moved: a physician scanning thirteen
+ * Tasks should see where the work stands without reading a word of it.
+ *
+ * The Status control stays in the drawer, the sort is unchanged, and the
+ * progress line counts what it counted before — the assertions for all
+ * three live in the describes above and below this one.
+ */
+describe("the colour on a card's left edge", () => {
+  it("leaves a Task nobody has started in quiet grey", async () => {
+    const app = newApp();
+    await signInAs(app, PHYSICIAN);
+
+    const card = cardFor(await page(app, FOUNDATION), FOUNDATION, EIN);
+
+    expect(card).toContain("border-l-gray-200");
+    expect(card).toContain(EIN_TITLE);
+  });
+
+  it("turns blue while a Task is in progress", async () => {
+    const app = newApp();
+    await signInAs(app, PHYSICIAN);
+    await press(app, FOUNDATION, EIN, "in_progress");
+
+    const card = cardFor(await page(app, FOUNDATION), FOUNDATION, EIN);
+
+    expect(card).toContain("border-l-primary");
+    expect(card).not.toContain("border-l-gray-200");
+    expect(card).toContain("In progress");
+  });
+
+  it("turns green once a Task is done", async () => {
+    const app = newApp();
+    await signInAs(app, PHYSICIAN);
+    await press(app, FOUNDATION, EIN, "done");
+
+    const card = cardFor(await page(app, FOUNDATION), FOUNDATION, EIN);
+
+    expect(card).toContain("border-l-success");
+    expect(card).not.toContain("border-l-primary");
+    expect(card).toContain("Done");
+  });
+
+  it("keeps Not Applicable grey, dimmed and down to its title", async () => {
+    const app = newApp();
+    await signInAs(app, PHYSICIAN);
+    await press(app, FOUNDATION, REGISTER_NAME, "not_applicable");
+
+    const card = cardFor(await page(app, FOUNDATION), FOUNDATION, REGISTER_NAME);
+
+    // Colour is added to a card here; what a set-aside card shows is not
+    // touched. ADR-0002 rests on the dimming and the title-only rendering.
+    expect(card).toContain("border-l-gray-200");
+    expect(card).toContain("opacity-60");
+    expect(card).toContain("Not applicable");
+  });
+
+  it("keeps `No longer required` grey, whatever the Practice last said", async () => {
+    const app = newApp();
+    await signInAs(app, PHYSICIAN);
+    await press(app, FOUNDATION, REGISTER_NAME, "done");
+    retire(app, REGISTER_NAME);
+
+    const card = cardFor(await page(app, FOUNDATION), FOUNDATION, REGISTER_NAME);
+
+    // `No longer required` outranks the Status on the row, so it outranks
+    // it on the edge too: a green edge would still be asking for the work.
+    expect(card).toContain("border-l-gray-200");
+    expect(card).not.toContain("border-l-success");
+    expect(card).toContain("opacity-60");
+    expect(card).toContain("No longer required");
+  });
+
+  it("still tells the card in view in the drawer from the rest", async () => {
+    const app = newApp();
+    await signInAs(app, PHYSICIAN);
+    await press(app, FOUNDATION, EIN, "done");
+
+    const open = await page(app, `${FOUNDATION}?task=${EIN}`);
+
+    // The edge says Done and the three other sides say *this is the one you
+    // are looking at*, so the two never have to share a colour and neither
+    // can overwrite the other.
+    const inView = cardFor(open, FOUNDATION, EIN);
+    expect(inView).toContain("border-t-primary");
+    expect(inView).toContain("border-l-success");
+    expect(cardFor(open, FOUNDATION, BRAINSTORM)).not.toContain(
+      "border-t-primary",
+    );
+  });
+
+  it("still flashes on the card that just landed", async () => {
+    const app = newApp();
+    await signInAs(app, PHYSICIAN);
+
+    const moved = await press(app, FOUNDATION, EIN, "in_progress");
+    const landed = await page(app, moved.headers.get("Location")!);
+
+    const card = cardFor(landed, FOUNDATION, EIN);
+    expect(card).toContain("task-landed");
+    expect(card).toContain("border-l-primary");
   });
 });
 

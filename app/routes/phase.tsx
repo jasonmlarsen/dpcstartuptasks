@@ -385,9 +385,19 @@ function TaskCard({ card, phaseSlug }: { card: JourneyCard; phaseSlug: string })
       // The landing flash, which is 900ms of CSS and no JavaScript: the card
       // the physician just touched says where it went, so a list that
       // re-sorted itself underneath them never loses it.
-      className={`block rounded-lg border bg-white px-4 py-3 ${
-        card.open ? "border-primary" : "border-gray-200"
-      } ${setAside ? "opacity-60" : ""} ${card.landed ? "task-landed" : ""}`}
+      //
+      // Where the work stands and which card is open are two answers, so
+      // they are two edges: the thick left one carries the Status, and the
+      // other three carry the drawer. Each side is coloured exactly once
+      // and the all-sides utility is deliberately not used — with both in
+      // the class list, which one a physician sees would rest on the order
+      // Tailwind happens to emit them in, and nothing here could catch that
+      // changing.
+      className={`block rounded-lg border border-l-4 bg-white px-4 py-3 ${
+        card.open ? OPEN_SIDES : QUIET_SIDES
+      } ${card.retired ? RETIRED_EDGE : STATUS_EDGE[card.status]} ${
+        setAside ? "opacity-60" : ""
+      } ${card.landed ? "task-landed" : ""}`}
     >
       <div className="flex items-baseline justify-between gap-3">
         <span
@@ -429,6 +439,45 @@ function TaskCard({ card, phaseSlug }: { card: JourneyCard; phaseSlug: string })
     </Link>
   );
 }
+
+/**
+ * The left edge of a card, in the colour of its Status.
+ *
+ * A Phase of thirteen Tasks used to read as thirteen identical rows, with
+ * the only difference in small grey type at the top right. Colour is what
+ * lets a physician see where the work stands before reading a word of it.
+ *
+ * Nothing here is a second source of truth about a Status: it is the same
+ * four values the control writes, said in colour rather than in words. Not
+ * Applicable keeps the quiet grey it shares with a Task nobody has started,
+ * because the dimming and the title-only rendering are what set it apart
+ * and this ticket does not touch either (ADR-0002).
+ */
+const STATUS_EDGE: Record<TaskStatus, string> = {
+  not_started: "border-l-gray-200",
+  in_progress: "border-l-primary",
+  done: "border-l-success",
+  not_applicable: "border-l-gray-200",
+};
+
+/**
+ * A Retired Task's edge, which is not a Status and is not looked up as one.
+ *
+ * `No longer required` outranks the Status on the edge exactly as it does
+ * on the row: a green edge would still be asking for work the Admin has
+ * withdrawn. What the Practice last said is still in its Task Entry, and
+ * un-retiring is the Admin's act.
+ */
+const RETIRED_EDGE = "border-l-gray-200";
+
+/**
+ * The other three sides, which say which card the drawer is open on.
+ *
+ * Named side by side rather than with `border-primary` and
+ * `border-gray-200`, so neither of them can reach the left edge.
+ */
+const OPEN_SIDES = "border-t-primary border-r-primary border-b-primary";
+const QUIET_SIDES = "border-t-gray-200 border-r-gray-200 border-b-gray-200";
 
 /**
  * Where the Practice has got to, said quietly.
