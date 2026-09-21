@@ -134,6 +134,16 @@ _Avoid_: Onboarding (it happens after the account exists and is not required), s
 What a Practice told the Tailoring Wizard: its state, whether it sees patients at a fixed location, and whether it expects employees. Kept after the Wizard has done its work, for wording and for segmenting email — never re-applied to Tasks published later.
 _Avoid_: Onboarding answers, preferences, settings
 
+### The list on screen
+
+**Rail**:
+The eleven Phases standing together beside a Practice's list, each carrying its own progress. What makes 98 Tasks finite — the number a physician holds is eleven, not ninety-eight — and the reason only one Phase's Tasks are ever on screen.
+_Avoid_: Stepper, breadcrumb (both promise an order the product never enforces), sidebar, nav, tabs
+
+**Station**:
+One Phase's place on the Rail: a mark showing its number, or a check once every Task that Phase still asks of this Practice is done, with the Phase name and its own `n of m`. Complete and in view are separate things, and neither locks anything — every other Phase stays one press away.
+_Avoid_: Step (nothing is sequenced), pill (a Station was one before it carried progress; the word still belongs to the `Varies by state` badge), node, dot, milestone
+
 ### Feedback
 
 **Feedback**:
