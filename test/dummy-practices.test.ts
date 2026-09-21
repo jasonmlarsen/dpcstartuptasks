@@ -6,13 +6,16 @@ import { eq, isNotNull } from "drizzle-orm";
 import { describe, expect, it, onTestFinished } from "vitest";
 import * as serverBuild from "virtual:react-router/server-build";
 
+import { createDatabase } from "~/database/database";
 import {
+  continueAttempt,
   invite,
   membership,
   practice,
   taskEntry,
   user,
 } from "~/database/schema";
+import { seed, TASK_LIBRARY_CSV_PATH } from "~/seed/seed";
 import {
   buildDummyPractices,
   DummyPracticeError,
@@ -231,6 +234,29 @@ describe("a run of the tool itself", () => {
         practices: 1,
       }),
     ).rejects.toThrow(/npm run db:seed/);
+  });
+
+  it("presses Continue as its own connection, not as the developer's browser", async () => {
+    // The point of the run is the link it prints, and the developer presses
+    // that link in a browser — from `127.0.0.1`, which is what
+    // `clientIpAddress` reads every unforwarded request in development as.
+    // A run counted as that browser spends the browser's own allowance on the
+    // Continue leg and hands the developer *Too many attempts* on the very
+    // link it just minted. So: the run's presses are somebody else's.
+    const databaseFile = developmentDatabase();
+    const seeded = createDatabase(databaseFile);
+    seed(seeded, TASK_LIBRARY_CSV_PATH);
+
+    await runDummyPractices({ build: serverBuild, databaseFile, practices: 1 });
+
+    const pressed = seeded
+      .select({ ipAddress: continueAttempt.ipAddress })
+      .from(continueAttempt)
+      .all();
+
+    // It pressed — otherwise this asserts nothing — and never as the browser.
+    expect(pressed.length).toBeGreaterThan(0);
+    expect(pressed.map((row) => row.ipAddress)).not.toContain("127.0.0.1");
   });
 
   it("refuses production itself, rather than trusting a caller to ask", async () => {

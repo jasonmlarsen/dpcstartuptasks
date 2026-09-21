@@ -172,9 +172,16 @@ Nothing delivers mail in development, so the run holds its own mailbox and
 prints every message it sends. It ends by minting one **unpressed** Sign-in
 Link per Owner: start the app with `npm run dev` and open one to enter the
 Practice it just built. Like every other, it lives ten minutes and works
-once. Five Practices is the most one run can build — everything in it presses
-Continue from one address, and beyond that the app's own rate limiting would
-refuse, so the tool says so up front instead.
+once.
+
+The run presses Continue as its own connection rather than as `127.0.0.1`, so
+it never spends the allowance the browser then needs — a tool that hands you a
+link and then makes *Too many attempts* the answer to pressing it would be
+worse than no tool. Five Practices is the most one run can build: everyone in
+a single run shares that connection, and beyond five the per-IP limit on the
+Continue leg would refuse half way through, so the tool says so up front
+instead. Two runs a few minutes apart are fine — each gets a connection of its
+own.
 
 ## Signing in
 
