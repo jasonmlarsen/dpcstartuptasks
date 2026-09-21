@@ -1,11 +1,23 @@
 /* Tailwind and shadcn first, the design tokens last, so the tokens win.
    `styles/design-tokens.css` is the parent site's file and the source of
    truth for colour and spacing (ADR-0005). It is imported, never copied, and
-   nothing below may redefine a name it already carries. */
+   nothing below may redefine a name it already carries.
+
+   `layer(base)` is load-bearing and not tidiness. The file ends with the
+   parent site's reset — `* { margin: 0; padding: 0 }` — and an unlayered rule
+   beats a layered one outright, whatever its specificity. Tailwind puts every
+   utility in `@layer utilities`, so imported bare, that one selector silently
+   overrode `px-6`, `py-16`, `mt-4` and `mx-auto` on every screen in the app:
+   colour, borders and type all correct, and not one margin or padding
+   anywhere. In `base` the reset sits where a reset belongs, below the
+   utilities, while the tokens still override Tailwind's own `@theme` — the
+   layer order Tailwind declares is `theme, base, components, utilities`, so
+   `base` wins over `theme` exactly as this file needs and loses to the
+   utilities exactly as it should. */
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
-@import "../styles/design-tokens.css";
+@import "../styles/design-tokens.css" layer(base);
 
 /* The tokens, as Tailwind utilities.
 
