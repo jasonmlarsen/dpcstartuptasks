@@ -130,6 +130,12 @@ Tasks and Helpful Links, so it cannot create a Practice, a User or a
 Membership. Together those are what make it safe to point at a production
 database.
 
+Before launch there is a second direction: `npm run db:export` writes a
+development database's Task Library back out to that CSV, so the content pass
+can be typed in the admin panel and still arrive in production through the
+committed file. The round trip is byte-for-byte. See
+[`docs/seed/README.md`](./docs/seed/README.md) for the full publish sequence.
+
 **It runs from a checkout, never from inside the container.** The script is
 deliberately not in the production image: the dangerous capability lives
 outside the running app, where no bug can make it reachable. On the VPS that
