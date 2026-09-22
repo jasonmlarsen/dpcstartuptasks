@@ -15,6 +15,7 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:seed": "tsx scripts/seed.ts",
+    "db:export": "tsx scripts/export.ts",
     "dev:practices": "tsx scripts/dummy-practices.ts",
     "kit:drain": "tsx scripts/drain-kit-queue.ts",
     "kit:provision": "tsx scripts/provision-kit-field.ts",
