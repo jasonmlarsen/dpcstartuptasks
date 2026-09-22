@@ -1,9 +1,9 @@
 import { Form, Link, redirect } from "react-router";
 
 import { AppBar } from "~/components/app-bar";
+import { EMAIL_CONSENT_WORDING } from "~/consent/consent-wording";
 import {
   emailConsentGrantedAt,
-  EMAIL_CONSENT_WORDING,
   kitSuppressedAt,
   subscribeByHand,
 } from "~/consent/email-consent";

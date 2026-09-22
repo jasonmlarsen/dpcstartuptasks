@@ -29,15 +29,15 @@ import { enqueueKitSyncJob } from "./kit-sync-queue";
 export const EMAIL_CONSENT_VERSION = "2026-09-signup-v1";
 
 /**
- * The owner's own words, first person on purpose: it is one person asking, not
- * a company harvesting a list, and it is the persuasion that earns a tick
- * without a gate.
+ * The sentence itself lives in `consent-wording.ts`, which imports nothing.
+ *
+ * It is re-exported here so that this file still reads as the whole of Email
+ * Consent, and so the version above sits beside the words it versions. A
+ * component must import it from `~/consent/consent-wording` instead: this
+ * module reaches `node:crypto` through `emailDigest`, and a route component
+ * that pulls the sentence from here drags that into the browser.
  */
-export const EMAIL_CONSENT_WORDING =
-  "In order to keep this a free service to members, I would really " +
-  "appreciate being able to communicate with you over email. You can still " +
-  "unsubscribe at any time, and I will never sell or give away your email " +
-  "address to anyone else.";
+export { EMAIL_CONSENT_WORDING } from "./consent-wording";
 
 /**
  * How long a consent given on the registration form waits for its account.

@@ -1,10 +1,8 @@
 import { Form, Link, redirect } from "react-router";
 
 import { requestSignInLink } from "~/auth/server";
-import {
-  EMAIL_CONSENT_WORDING,
-  recordEmailConsentChoice,
-} from "~/consent/email-consent";
+import { EMAIL_CONSENT_WORDING } from "~/consent/consent-wording";
+import { recordEmailConsentChoice } from "~/consent/email-consent";
 import { getServices } from "~/services/services";
 import type { Route } from "./+types/sign-in";
 
