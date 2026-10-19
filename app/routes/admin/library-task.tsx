@@ -231,7 +231,10 @@ export default function AdminLibraryTask({
           more often than not. */}
       <FeedbackSection feedback={feedback} />
 
-      <EditForm task={task} />
+      <EditForm
+        task={task}
+        saved={Boolean(actionData && "saved" in actionData)}
+      />
       <PublishingSection task={task} />
       <LinksSection task={task} />
       <DependenciesSection task={task} />
@@ -301,7 +304,7 @@ function StateSentence({ task }: { task: EditableTask }) {
  * publish gate for a live Task, so there is deliberately nothing here that
  * writes without it.
  */
-function EditForm({ task }: { task: EditableTask }) {
+function EditForm({ task, saved }: { task: EditableTask; saved: boolean }) {
   return (
     <Form method="post" className="space-y-4">
       <input type="hidden" name="intent" value="save" />
@@ -376,11 +379,22 @@ function EditForm({ task }: { task: EditableTask }) {
         >
           Save
         </button>
-        <p className="text-sm text-gray-600">
-          {task.state === "published"
-            ? "Saving reaches every practice immediately. Nothing is saved until you press it."
-            : "Nothing is saved until you press it."}
-        </p>
+        {/* Said again beside the button as well as in the banner, because
+            the Admin pressing Save is usually scrolled well below the banner. */}
+        {saved ? (
+          <p className="text-sm font-medium text-green-800">
+            Saved.{" "}
+            {task.state === "published"
+              ? "Every practice is reading it now."
+              : "Still a draft."}
+          </p>
+        ) : (
+          <p className="text-sm text-gray-600">
+            {task.state === "published"
+              ? "Saving reaches every practice immediately. Nothing is saved until you press it."
+              : "Nothing is saved until you press it."}
+          </p>
+        )}
       </div>
     </Form>
   );
@@ -489,7 +503,13 @@ function LinksSection({ task }: { task: EditableTask }) {
         </ul>
       )}
 
-      <Form method="post" className="mt-4 flex flex-wrap items-end gap-3">
+      {/* Keyed on the count so a link that lands remounts the form and empties
+          it for the next one, while a refused one keeps what was typed. */}
+      <Form
+        key={task.links.length}
+        method="post"
+        className="mt-4 flex flex-wrap items-end gap-3"
+      >
         <input type="hidden" name="intent" value="add-link" />
 
         <div className="grow">

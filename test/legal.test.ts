@@ -121,10 +121,9 @@ describe("the Support View disclosure", () => {
     const drawer = await page(app, EIN_DRAWER);
 
     // The policy is read once at registration; the Note box is where someone
-    // is about to type the thing they would regret. Same sentence, narrowed
-    // to the note being written.
+    // is about to type the thing they would regret.
     expect(drawer).toContain(
-      "Launch Tasks is run by one person. To help you when something goes wrong, that person can sign in to your practice and see it exactly as you do — including this note.",
+      "Please do not store sensitive information in this area. While the app is secure, admins of this site can see the content of this area when troubleshooting issues.",
     );
   });
 

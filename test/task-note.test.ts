@@ -223,7 +223,7 @@ describe("the quiet line under the Note field", () => {
     // is about to type the thing they would regret. It is a sentence and
     // not an obligation: Support View is deliberately not consent-gated.
     expect(open).toContain(
-      "Launch Tasks is run by one person. To help you when something goes wrong, that person can sign in to your practice and see it exactly as you do — including this note.",
+      "Please do not store sensitive information in this area. While the app is secure, admins of this site can see the content of this area when troubleshooting issues.",
     );
     expect(open).not.toMatch(/\ballow\b|\bconsent\b|\bpermission\b/i);
   });
